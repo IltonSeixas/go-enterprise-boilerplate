@@ -1,3 +1,5 @@
+> **Em desenvolvimento** — este projeto ainda está em construção e não deve ser utilizado em produção.
+
 # go-enterprise-boilerplate
 
 [![CI](https://github.com/IltonSeixas/go-enterprise-boilerplate/actions/workflows/ci.yml/badge.svg)](https://github.com/IltonSeixas/go-enterprise-boilerplate/actions/workflows/ci.yml)
