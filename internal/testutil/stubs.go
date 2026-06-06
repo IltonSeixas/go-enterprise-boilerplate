@@ -1,0 +1,128 @@
+package testutil
+
+import (
+	"context"
+	"sync"
+
+	"github.com/google/uuid"
+
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/port"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/apperror"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/entity"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/repository"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/valueobject"
+)
+
+// StubUserRepo is a minimal in-memory stub for unit tests.
+type StubUserRepo struct {
+	mu sync.RWMutex
+
+	findByEmailUser *entity.User
+	findByEmailErr  error
+
+	saveFirstOwnerClaimed bool
+	saveFirstOwnerErr     error
+
+	store map[uuid.UUID]*entity.User
+}
+
+func NewStubUserRepo() *StubUserRepo {
+	return &StubUserRepo{
+		store:                 make(map[uuid.UUID]*entity.User),
+		saveFirstOwnerClaimed: true,
+	}
+}
+
+func (s *StubUserRepo) SetFindByEmailResult(u *entity.User, err error) {
+	s.findByEmailUser = u
+	s.findByEmailErr = err
+}
+
+func (s *StubUserRepo) SetSaveFirstOwnerResult(claimed bool, err error) {
+	s.saveFirstOwnerClaimed = claimed
+	s.saveFirstOwnerErr = err
+}
+
+func (s *StubUserRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.User, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	u, ok := s.store[id]
+	if !ok {
+		return nil, apperror.ErrUserNotFound
+	}
+	return u, nil
+}
+
+func (s *StubUserRepo) FindByEmail(_ context.Context, _ valueobject.Email) (*entity.User, error) {
+	return s.findByEmailUser, s.findByEmailErr
+}
+
+func (s *StubUserRepo) Save(_ context.Context, u *entity.User) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.store[u.ID().UUID()] = u
+	return nil
+}
+
+func (s *StubUserRepo) Delete(_ context.Context, id uuid.UUID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.store, id)
+	return nil
+}
+
+func (s *StubUserRepo) Count(_ context.Context) (int64, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return int64(len(s.store)), nil
+}
+
+func (s *StubUserRepo) SaveFirstOwner(_ context.Context, u *entity.User) (bool, error) {
+	if s.saveFirstOwnerErr != nil {
+		return false, s.saveFirstOwnerErr
+	}
+	if s.saveFirstOwnerClaimed {
+		s.mu.Lock()
+		s.store[u.ID().UUID()] = u
+		s.mu.Unlock()
+	}
+	return s.saveFirstOwnerClaimed, nil
+}
+
+var _ repository.UserRepository = (*StubUserRepo)(nil)
+
+// StubHasher always succeeds with a fixed PHC string.
+type StubHasher struct{}
+
+func NewStubHasher() *StubHasher { return &StubHasher{} }
+
+func (h *StubHasher) Hash(_ string) (valueobject.PasswordHash, error) {
+	return valueobject.NewPasswordHashFromPHC("$argon2id$stub"), nil
+}
+
+func (h *StubHasher) Verify(_ string, _ valueobject.PasswordHash) (bool, error) {
+	return true, nil
+}
+
+var _ port.PasswordHasher = (*StubHasher)(nil)
+
+// StubTokenService returns fixed tokens without I/O.
+type StubTokenService struct{}
+
+func NewStubTokenService() *StubTokenService { return &StubTokenService{} }
+
+func (s *StubTokenService) GeneratePair(_ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
+	return port.TokenPair{AccessToken: "access-stub", RefreshToken: "refresh-stub"}, nil
+}
+
+func (s *StubTokenService) ValidateAccessToken(_ string) (port.AccessTokenClaims, error) {
+	return port.AccessTokenClaims{UserID: uuid.New(), Role: entity.RoleUser}, nil
+}
+
+func (s *StubTokenService) RotateRefreshToken(_ string, id uuid.UUID, role entity.Role) (port.TokenPair, error) {
+	return port.TokenPair{AccessToken: "access-new", RefreshToken: "refresh-new"}, nil
+}
+
+func (s *StubTokenService) RevokeRefreshToken(_ string) error { return nil }
+
+var _ port.TokenService = (*StubTokenService)(nil)

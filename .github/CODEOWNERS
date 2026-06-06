@@ -1,0 +1,10 @@
+# Global owner — required reviewer for all changes
+* @iltonseixas
+
+# Domain and application layers require stricter review
+/internal/domain/ @iltonseixas
+/internal/application/ @iltonseixas
+
+# Security-sensitive files
+/internal/infrastructure/security/ @iltonseixas
+/.github/workflows/ @iltonseixas
