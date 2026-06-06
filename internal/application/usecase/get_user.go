@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/dto"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/apperror"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/entity"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/repository"
 )
 
@@ -17,8 +19,12 @@ func NewGetUser(users repository.UserRepository) *GetUser {
 	return &GetUser{users: users}
 }
 
-func (uc *GetUser) Execute(ctx context.Context, id uuid.UUID) (dto.UserOutput, error) {
-	user, err := uc.users.FindByID(ctx, id)
+func (uc *GetUser) Execute(ctx context.Context, callerID uuid.UUID, callerRole entity.Role, targetID uuid.UUID) (dto.UserOutput, error) {
+	if callerID != targetID && !callerRole.CanManageRoles() {
+		return dto.UserOutput{}, apperror.ErrInsufficientPerms
+	}
+
+	user, err := uc.users.FindByID(ctx, targetID)
 	if err != nil {
 		return dto.UserOutput{}, err
 	}
