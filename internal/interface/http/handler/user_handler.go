@@ -8,7 +8,6 @@ import (
 
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/dto"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/usecase"
-	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/apperror"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/interface/http/middleware"
 )
 
@@ -36,7 +35,7 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	out, err := h.getUser.Execute(c.Request.Context(), claims.UserID)
+	out, err := h.getUser.Execute(c.Request.Context(), claims.UserID, claims.Role, claims.UserID)
 	if err != nil {
 		c.JSON(domainStatus(err), gin.H{"error": err.Error()})
 		return
@@ -57,12 +56,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	if claims.UserID != targetID && !claims.Role.CanManageRoles() {
-		c.JSON(http.StatusForbidden, gin.H{"error": apperror.ErrInsufficientPerms.Error()})
-		return
-	}
-
-	out, err := h.getUser.Execute(c.Request.Context(), targetID)
+	out, err := h.getUser.Execute(c.Request.Context(), claims.UserID, claims.Role, targetID)
 	if err != nil {
 		c.JSON(domainStatus(err), gin.H{"error": err.Error()})
 		return

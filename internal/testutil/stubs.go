@@ -106,6 +106,73 @@ func (h *StubHasher) Verify(_ string, _ valueobject.PasswordHash) (bool, error) 
 
 var _ port.PasswordHasher = (*StubHasher)(nil)
 
+// StubHasherRejectAll rejects all verification attempts.
+type StubHasherRejectAll struct{}
+
+func NewStubHasherRejectAll() *StubHasherRejectAll { return &StubHasherRejectAll{} }
+
+func (h *StubHasherRejectAll) Hash(_ string) (valueobject.PasswordHash, error) {
+	return valueobject.NewPasswordHashFromPHC("$argon2id$stub"), nil
+}
+
+func (h *StubHasherRejectAll) Verify(_ string, _ valueobject.PasswordHash) (bool, error) {
+	return false, nil
+}
+
+var _ port.PasswordHasher = (*StubHasherRejectAll)(nil)
+
+// StubTokenServiceRejectAll rejects all token validation attempts.
+type StubTokenServiceRejectAll struct{}
+
+func NewStubTokenServiceRejectAll() *StubTokenServiceRejectAll {
+	return &StubTokenServiceRejectAll{}
+}
+
+func (s *StubTokenServiceRejectAll) GeneratePair(_ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
+	return port.TokenPair{}, apperror.ErrTokenInvalid
+}
+
+func (s *StubTokenServiceRejectAll) ValidateAccessToken(_ string) (port.AccessTokenClaims, error) {
+	return port.AccessTokenClaims{}, apperror.ErrTokenInvalid
+}
+
+func (s *StubTokenServiceRejectAll) RotateRefreshToken(_ string, _ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
+	return port.TokenPair{}, apperror.ErrTokenInvalid
+}
+
+func (s *StubTokenServiceRejectAll) RevokeRefreshToken(_ string) error { return nil }
+
+var _ port.TokenService = (*StubTokenServiceRejectAll)(nil)
+
+// StubTokenServiceWithClaims validates a fixed token and returns preset claims.
+type StubTokenServiceWithClaims struct {
+	ValidToken string
+	Claims     port.AccessTokenClaims
+}
+
+func NewStubTokenServiceWithClaims(token string, claims port.AccessTokenClaims) *StubTokenServiceWithClaims {
+	return &StubTokenServiceWithClaims{ValidToken: token, Claims: claims}
+}
+
+func (s *StubTokenServiceWithClaims) GeneratePair(id uuid.UUID, role entity.Role) (port.TokenPair, error) {
+	return port.TokenPair{AccessToken: s.ValidToken, RefreshToken: "refresh-stub"}, nil
+}
+
+func (s *StubTokenServiceWithClaims) ValidateAccessToken(token string) (port.AccessTokenClaims, error) {
+	if token != s.ValidToken {
+		return port.AccessTokenClaims{}, apperror.ErrTokenInvalid
+	}
+	return s.Claims, nil
+}
+
+func (s *StubTokenServiceWithClaims) RotateRefreshToken(_ string, id uuid.UUID, role entity.Role) (port.TokenPair, error) {
+	return port.TokenPair{AccessToken: s.ValidToken, RefreshToken: "refresh-new"}, nil
+}
+
+func (s *StubTokenServiceWithClaims) RevokeRefreshToken(_ string) error { return nil }
+
+var _ port.TokenService = (*StubTokenServiceWithClaims)(nil)
+
 // StubTokenService returns fixed tokens without I/O.
 type StubTokenService struct{}
 
