@@ -10,55 +10,52 @@ The three pillars — **traces**, **metrics**, and **logs** — are correlated b
 
 ## Traces
 
-Every HTTP request is automatically instrumented via `otelgin`. gRPC calls are instrumented via the `otelgrpc` interceptor. Use cases emit child spans via the context-propagated tracer.
-
-### Setup
+`internal/infrastructure/telemetry/setup.go` configures a global `TracerProvider` backed by an OTLP gRPC exporter, batching spans and tagging them with the service name via OpenTelemetry semantic conventions. Always-on sampling is used by default — tune `sdktrace.WithSampler` for high-traffic production deployments.
 
 ```go
-// infrastructure/telemetry/setup.go
-exporter, _ := otlptracegrpc.New(ctx,
-    otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint),
-    otlptracegrpc.WithInsecure(),
-)
-
-tp := trace.NewTracerProvider(
-    trace.WithBatcher(exporter),
-    trace.WithResource(resource.NewWithAttributes(
-        semconv.SchemaURL,
-        semconv.ServiceName(cfg.ServiceName),
-    )),
-)
-otel.SetTracerProvider(tp)
-```
-
-### Manual spans in use cases
-
-```go
-func (uc *RegisterUser) Execute(ctx context.Context, input dto.RegisterInput) error {
-    ctx, span := otel.Tracer("usecase").Start(ctx, "RegisterUser.Execute")
-    defer span.End()
-
-    // attach attributes (never sensitive data)
-    span.SetAttributes(attribute.String("user.email_domain", emailDomain(input.Email)))
-
+func InitTracing(ctx context.Context, serviceName, otlpEndpoint string) (Shutdown, error) {
+    exp, err := otlptracegrpc.New(ctx,
+        otlptracegrpc.WithEndpoint(otlpEndpoint),
+        otlptracegrpc.WithInsecure(),
+    )
+    // ...
+    tp := sdktrace.NewTracerProvider(
+        sdktrace.WithBatcher(exp),
+        sdktrace.WithResource(resource.NewWithAttributes(
+            semconv.SchemaURL,
+            semconv.ServiceName(serviceName),
+        )),
+        sdktrace.WithSampler(sdktrace.AlwaysSample()),
+    )
+    otel.SetTracerProvider(tp)
     // ...
 }
 ```
+
+The provider is registered globally via `otel.SetTracerProvider`, so any adapter or use case can obtain a tracer with `otel.Tracer(name)` and start spans propagated through `context.Context` — extend coverage by wrapping the operations you want visible in traces.
 
 ---
 
 ## Metrics
 
-Prometheus-format metrics are exposed at `GET /metrics` via `prometheus/client_golang`. The `otelgin` middleware records request count and latency histograms automatically.
+`internal/infrastructure/telemetry/setup.go` wires an OpenTelemetry `MeterProvider` to the Prometheus exporter bridge (`go.opentelemetry.io/otel/exporters/prometheus`), which feeds the default Prometheus registry. The HTTP router exposes that registry at `GET /metrics` via `promhttp.Handler()`.
 
-### Available metrics
+```go
+func InitPrometheus() (Shutdown, error) {
+    exp, err := promexporter.New()
+    // ...
+    mp := metric.NewMeterProvider(metric.WithReader(exp))
+    otel.SetMeterProvider(mp)
+    // ...
+}
+```
 
-| Metric | Type | Description |
-|---|---|---|
-| `http_requests_total` | Counter | Total HTTP requests by method, path, status |
-| `http_request_duration_seconds` | Histogram | Request latency by method and path |
-| `http_requests_in_flight` | Gauge | Currently active requests |
-| `db_query_duration_seconds` | Histogram | Database query latency by operation |
+```go
+// interface/http/router.go
+r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+```
+
+Out of the box this exposes Go runtime and process metrics from the default registry. Register custom counters, histograms and gauges via `otel.Meter(name)` (or directly against the Prometheus registry) to track business and request-level metrics as the application grows.
 
 ### Scrape config (Prometheus)
 
@@ -66,7 +63,7 @@ Prometheus-format metrics are exposed at `GET /metrics` via `prometheus/client_g
 scrape_configs:
   - job_name: go-api
     static_configs:
-      - targets: ['localhost:3000']
+      - targets: ['localhost:8080']
     metrics_path: /metrics
 ```
 
@@ -74,20 +71,15 @@ scrape_configs:
 
 ## Logs
 
-Structured JSON logs via `log/slog` (Go 1.21+ standard library). Every log line includes the trace ID and span ID, enabling correlation with distributed traces.
-
-### Trace ID injection
+Structured JSON logs via `go.uber.org/zap`, configured in `internal/infrastructure/telemetry/setup.go` on top of `zap.NewProductionConfig()` with an ISO-8601 timestamp encoder and a `service` field injected into every entry.
 
 ```go
-func logWithTrace(ctx context.Context, msg string, args ...any) {
-    span := trace.SpanFromContext(ctx)
-    sc := span.SpanContext()
-    slog.InfoContext(ctx, msg,
-        append(args,
-            "trace_id", sc.TraceID().String(),
-            "span_id",  sc.SpanID().String(),
-        )...,
-    )
+func InitLogger(serviceName string) (*zap.Logger, error) {
+    cfg := zap.NewProductionConfig()
+    cfg.EncoderConfig.TimeKey = "ts"
+    cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+    cfg.InitialFields = map[string]any{"service": serviceName}
+    return cfg.Build()
 }
 ```
 
@@ -95,11 +87,10 @@ func logWithTrace(ctx context.Context, msg string, args ...any) {
 
 ```json
 {
-  "time": "2024-01-15T10:30:00.123Z",
-  "level": "INFO",
+  "ts": "2024-01-15T10:30:00.123Z",
+  "level": "info",
   "msg": "user registered",
-  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
-  "span_id": "00f067aa0ba902b7",
+  "service": "go-enterprise-boilerplate",
   "user_id": "01HN..."
 }
 ```
@@ -108,12 +99,12 @@ func logWithTrace(ctx context.Context, msg string, args ...any) {
 
 | Level | Use |
 |---|---|
-| `ERROR` | Unrecoverable failures — always paged |
-| `WARN` | Recoverable unexpected states |
-| `INFO` | Business events (user registered, login succeeded) |
-| `DEBUG` | Development only — never in production |
+| `error` | Unrecoverable failures — always paged |
+| `warn` | Recoverable unexpected states |
+| `info` | Business events (user registered, login succeeded) |
+| `debug` | Development only — never in production |
 
-Set via `LOG_LEVEL=info` environment variable.
+`zap.NewProductionConfig()` defaults to `info` level and JSON encoding — appropriate for production out of the box.
 
 ---
 
@@ -121,10 +112,7 @@ Set via `LOG_LEVEL=info` environment variable.
 
 | Variable | Default | Description |
 |---|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTLP gRPC endpoint |
-| `OTEL_SERVICE_NAME` | `go-enterprise-boilerplate` | Service name in traces |
-| `OTEL_SERVICE_VERSION` | — | Injected by CI from git tag |
-| `LOG_LEVEL` | `info` | slog log level |
+| `OTLP_ENDPOINT` | `localhost:4317` | OTLP gRPC endpoint for traces and metrics |
 
 ---
 

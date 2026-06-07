@@ -38,18 +38,15 @@ Go's simplicity is a feature, not a limitation. This boilerplate embraces idioma
 │   ├── infrastructure/   # Adapters — implements domain interfaces
 │   │   ├── persistence/
 │   │   │   ├── memory/   # Default: zero-config, runs immediately
-│   │   │   └── postgres/ # Production: pgx + squirrel
-│   │   ├── security/     # Argon2id password hashing
-│   │   ├── cache/        # Redis adapter
-│   │   └── telemetry/    # OpenTelemetry setup
+│   │   │   └── postgres/ # Production: pgx with parameterized raw SQL
+│   │   ├── security/     # Argon2id hashing, JWT issuance, Redis-backed refresh tokens
+│   │   └── telemetry/    # OpenTelemetry + zap setup
 │   │
 │   └── interface/        # Entry points
 │       ├── http/          # Gin handlers, middleware, routes
 │       └── grpc/          # gRPC server and service implementations
 │
-└── pkg/                  # Exported utilities (safe for external use)
-    ├── pagination/
-    └── validator/
+└── proto/                # Protocol Buffers definitions and generated code
 ```
 
 ### Dependency rule
@@ -69,15 +66,15 @@ infrastructure/ → application/ → domain/
 |---|---|
 | HTTP router | `gin-gonic/gin` |
 | gRPC | `google.golang.org/grpc` + `protoc-gen-go` |
-| Database (production) | `jackc/pgx` + `Masterminds/squirrel` |
+| Database (production) | `jackc/pgx` with parameterized raw SQL |
 | Password hashing | `golang.org/x/crypto/argon2` (native) |
 | JWT | `golang-jwt/jwt/v5` |
-| Validation | `go-playground/validator/v10` |
+| Validation | Gin binding tags backed by `go-playground/validator/v10` |
 | Observability | `go.opentelemetry.io/otel` |
-| Structured logging | `log/slog` (stdlib, Go 1.21+) |
+| Structured logging | `go.uber.org/zap` |
 | Config | `spf13/viper` |
-| Testing | `testing` (stdlib) + `testify` + `gomock` |
-| Migration | `golang-migrate/migrate` |
+| Testing | `testing` (stdlib) + `testify` + hand-written stubs (`internal/testutil`) |
+| Rate limiting | `golang.org/x/time/rate` (in-memory, per-IP token bucket) |
 
 ---
 
@@ -96,7 +93,7 @@ cd go-enterprise-boilerplate
 go run ./cmd/server
 ```
 
-The server starts on `http://localhost:3000`. No database required.
+The server starts on `http://localhost:8080`. No database required.
 
 ### Run with PostgreSQL
 
@@ -130,26 +127,28 @@ The `PasswordHasher` interface in `domain/repository/` abstracts the algorithm f
 
 ### Security Middleware (applied globally via Gin)
 
-- Rate limiting: sliding window per IP using Redis
-- Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, `Content-Security-Policy`
+- Rate limiting: in-memory per-IP token bucket via `golang.org/x/time/rate` (stricter limit on `/v1/auth/*`)
+- Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, `Referrer-Policy`
 - CORS: explicit allow-list, never `*` in production
-- Input validation: `validator` on all DTOs at the HTTP boundary
-- Request ID: injected on every request, propagated through context
+- Input validation: Gin binding tags (backed by `go-playground/validator`) on all request DTOs
 
 ---
 
 ## API
 
-### REST — `http://localhost:3000`
+### REST — `http://localhost:8080`
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/v1/auth/register` | Register a new user |
-| `POST` | `/api/v1/auth/login` | Authenticate, receive tokens |
-| `POST` | `/api/v1/auth/refresh` | Rotate refresh token |
-| `POST` | `/api/v1/auth/logout` | Revoke refresh token |
-| `GET` | `/api/v1/users/me` | Get authenticated user profile |
-| `GET` | `/health` | Health check |
+| `POST` | `/v1/auth/register` | Register a new user |
+| `POST` | `/v1/auth/login` | Authenticate, receive tokens |
+| `POST` | `/v1/auth/refresh` | Rotate refresh token |
+| `GET` | `/v1/users/me` | Get authenticated user profile |
+| `PUT` | `/v1/users/me` | Update authenticated user profile |
+| `PUT` | `/v1/users/me/password` | Change authenticated user password |
+| `GET` | `/v1/users/:id` | Get user by ID |
+| `GET` | `/health` | Liveness check |
+| `GET` | `/ready` | Readiness check |
 | `GET` | `/metrics` | Prometheus metrics |
 
 ### gRPC — `localhost:50051`
@@ -162,8 +161,8 @@ make proto  # requires protoc, protoc-gen-go and protoc-gen-go-grpc on PATH
 
 | Service | RPC | Mirrors |
 |---|---|---|
-| `AuthService` | `Register`, `Login`, `RefreshToken` | `/api/v1/auth/*` |
-| `UserService` | `GetMe`, `UpdateProfile`, `ChangePassword` | `/api/v1/users/*` |
+| `AuthService` | `Register`, `Login`, `RefreshToken` | `/v1/auth/*` |
+| `UserService` | `GetMe`, `UpdateProfile`, `ChangePassword` | `/v1/users/*` |
 
 `UserService` RPCs require an `authorization: Bearer <access_token>` request metadata entry, validated by a unary interceptor that mirrors the REST `RequireAuth` middleware (active-account check included). Server reflection is enabled for easy inspection with tools like `grpcurl`.
 
@@ -172,32 +171,30 @@ make proto  # requires protoc, protoc-gen-go and protoc-gen-go-grpc on PATH
 ## Testing
 
 ```bash
-go test ./...                          # all unit tests
-go test ./... -tags=integration        # integration tests (requires Postgres)
+go test ./...                          # all tests
 go test ./internal/domain/... -v       # domain tests only
 ```
 
 ### Structure
 
-- **Unit tests**: `_test.go` files co-located with source. Domain and use cases tested in complete isolation using `gomock`-generated mocks from repository port interfaces.
-- **Integration tests**: `internal/infrastructure/**/*_integration_test.go`. Run against a real database using `testcontainers-go` or a local instance.
+- **Unit tests**: `_test.go` files co-located with source. Domain entities, value objects and use cases are tested in complete isolation using hand-written stubs from `internal/testutil` that satisfy the repository and service port interfaces — no Spring-style mocking framework, no real infrastructure.
 
 ### TDD Approach
 
-Write the use case test first, asserting against the port interface. The mock repository is generated from the interface definition — there's no coupling to any storage engine. Once the test is green, the use case works regardless of which adapter is wired at runtime.
+Write the use case test first, asserting against the port interface and a stub from `internal/testutil`. There's no coupling to any storage engine. Once the test is green, the use case works regardless of which adapter is wired at runtime.
 
 ---
 
 ## Observability
 
-- **Traces**: `otelgin` middleware instruments every HTTP request automatically; use cases emit child spans via `context`-propagated tracer
-- **Metrics**: Prometheus metrics at `/metrics` — request count, latency histograms, active connections
-- **Logs**: structured JSON via `log/slog`, correlated with trace IDs via context
+- **Traces**: an OTLP gRPC exporter and tracer provider are configured at startup; use cases and adapters emit spans via `context`-propagated tracers
+- **Metrics**: Prometheus metrics at `/metrics` — exported through the OpenTelemetry Prometheus bridge
+- **Logs**: structured JSON via `go.uber.org/zap`, correlated with trace IDs via context
 
 Export to any OTLP backend:
 
 ```env
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+OTLP_ENDPOINT=localhost:4317
 ```
 
 ---
@@ -209,26 +206,25 @@ All configuration via environment variables or `.env` file (Viper reads both).
 | Variable | Default | Description |
 |---|---|---|
 | `HOST` | `0.0.0.0` | Bind address |
-| `PORT` | `3000` | HTTP port |
+| `PORT` | `8080` | HTTP port |
 | `GRPC_PORT` | `50051` | gRPC port |
-| `DATABASE_URL` | — | PostgreSQL DSN |
-| `REDIS_URL` | — | Redis URL |
-| `JWT_SECRET` | — | HS256 signing key (min 32 chars) |
-| `JWT_ACCESS_TTL` | `15m` | Access token TTL |
-| `JWT_REFRESH_TTL` | `168h` | Refresh token TTL |
-| `RATE_LIMIT_RPS` | `100` | Max requests/sec per IP |
-| `LOG_LEVEL` | `info` | Log level |
 | `ADAPTER` | `memory` | Persistence adapter: `memory` or `postgres` |
+| `DATABASE_URL` | — | PostgreSQL DSN (required when `ADAPTER=postgres`) |
+| `REDIS_URL` | `redis://localhost:6379` | Redis connection URL (refresh token storage) |
+| `JWT_SECRET` | — | HS256 signing key (min 32 chars) |
+| `JWT_ACCESS_TTL` | `15m` | Access token TTL (Go duration string) |
+| `JWT_REFRESH_TTL` | `168h` | Refresh token TTL (Go duration string) |
+| `OTLP_ENDPOINT` | `localhost:4317` | OTLP gRPC traces/metrics endpoint |
 
 ---
 
 ## Docker
 
 ```bash
-# Multi-stage build — minimal final image (~10 MB)
+# Multi-stage build — minimal final image (FROM scratch)
 docker build -t go-enterprise-boilerplate .
 
-docker run -p 3000:3000 -p 50051:50051 --env-file .env go-enterprise-boilerplate
+docker run -p 8080:8080 -p 50051:50051 --env-file .env go-enterprise-boilerplate
 ```
 
 ```bash

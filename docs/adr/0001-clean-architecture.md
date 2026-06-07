@@ -23,7 +23,7 @@ Go's package system enforces this naturally — circular imports are compile err
 ## Consequences
 
 **Positive:**
-- Domain and application layers are testable without infrastructure — unit tests use `gomock`-generated mocks from the interface definitions.
+- Domain and application layers are testable without infrastructure — unit tests use hand-written stubs from `internal/testutil` that implement the same port interfaces as the production adapters.
 - Swapping infrastructure requires touching only the adapter.
 - Go interfaces are implicit — any struct with the right methods satisfies the contract, with no annotation required.
 
