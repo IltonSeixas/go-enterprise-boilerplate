@@ -9,16 +9,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 ## [Unreleased]
 
 ### Added
-- Initial project structure: Clean Architecture + DDD layers (`/internal`, `/pkg`, `/cmd`)
+- Initial project structure: Clean Architecture + DDD layers (`/internal`, `/cmd`)
 - In-memory user repository adapter (zero-config default)
 - Argon2id password hashing via `golang.org/x/crypto/argon2`
-- JWT HS256 access token + opaque refresh token with Redis rotation
-- Gin HTTP server with security middleware (rate limiting, CORS, security headers)
-- gRPC server with user service
-- OpenTelemetry tracing, Prometheus metrics, structured JSON logs via `slog`
-- PostgreSQL adapter via `pgx` + `squirrel`
+- JWT HS256 access token (returned in the response body) + opaque UUID refresh token with Redis-backed rotation (returned as a plain JSON field)
+- Gin HTTP server with security middleware (per-IP rate limiting, CORS allow-list, security headers)
+- gRPC server with auth and user services
+- OpenTelemetry tracing, Prometheus metrics, structured logs via `zap`
+- PostgreSQL adapter via `pgx` (implemented, not yet wired into the composition root)
 - Docker multi-stage image (`scratch` base) and docker-compose stack
-- GitHub Actions CI (vet, staticcheck, test, govulncheck), Docker, and Release workflows
+- GitHub Actions CI (vet, staticcheck, unit and integration tests, govulncheck), Docker, and Release workflows
 - Architecture documentation, ADRs, security policy
 
 [Unreleased]: https://github.com/IltonSeixas/go-enterprise-boilerplate/compare/HEAD

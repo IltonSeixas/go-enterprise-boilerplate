@@ -17,24 +17,21 @@ cp .env.example .env
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `HOST` | No | `0.0.0.0` | Bind address |
-| `PORT` | No | `3000` | HTTP listen port |
+| `PORT` | No | `8080` | HTTP listen port |
 | `GRPC_PORT` | No | `50051` | gRPC listen port |
 
 ### Persistence
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ADAPTER` | No | `memory` | Persistence adapter: `memory` or `postgres` |
+| `ADAPTER` | No | `memory` | Persistence adapter: `memory` or `postgres`. The `postgres` adapter is implemented but not yet wired into `main.go` — selecting it currently exits with a fatal error |
 | `DATABASE_URL` | If `postgres` | — | PostgreSQL DSN (`postgres://user:pass@host/db`) |
-| `DATABASE_MAX_CONNS` | No | `10` | Max open connections in pool |
-| `DATABASE_MIN_CONNS` | No | `2` | Min idle connections in pool |
-| `DATABASE_CONN_TIMEOUT` | No | `30s` | Connection acquire timeout |
 
 ### Cache
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `REDIS_URL` | If `postgres` | — | Redis connection string (`redis://host:port`) |
+| `REDIS_URL` | No | `redis://localhost:6379` | Redis connection string — used unconditionally for refresh-token storage |
 
 ### Authentication
 
@@ -48,18 +45,13 @@ cp .env.example .env
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ALLOWED_ORIGINS` | No | `http://localhost:*` | Comma-separated CORS allowed origins |
-| `RATE_LIMIT_RPS` | No | `100` | Max requests per second per IP |
-| `RATE_LIMIT_WINDOW` | No | `60s` | Rate limit sliding window duration |
+| `ALLOWED_ORIGINS` | No | `http://localhost:3000` | Comma-separated CORS allowed origins |
 
 ### Observability
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `LOG_LEVEL` | No | `info` | Log level (`error`, `warn`, `info`, `debug`) |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | `http://localhost:4317` | OTLP gRPC endpoint |
-| `OTEL_SERVICE_NAME` | No | `go-enterprise-boilerplate` | Service name in traces |
-| `OTEL_SERVICE_VERSION` | No | — | Injected by CI from git tag |
+| `OTLP_ENDPOINT` | No | `localhost:4317` | OTLP gRPC endpoint for traces and metrics |
 
 ---
 
@@ -68,9 +60,8 @@ cp .env.example .env
 Before deploying to production:
 
 - [ ] `JWT_SECRET` is a random value of at least 32 characters — never reuse development values
-- [ ] `DATABASE_URL` includes TLS parameters (`sslmode=require`)
+- [ ] `DATABASE_URL` includes TLS parameters (`sslmode=require`) — if you have wired up the postgres adapter
 - [ ] `REDIS_URL` uses a password-protected Redis instance
 - [ ] `ALLOWED_ORIGINS` lists only your actual frontend domains
-- [ ] `LOG_LEVEL` is set to `info` or `warn` — never `debug`
-- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` points to your observability backend
+- [ ] `OTLP_ENDPOINT` points to your observability backend
 - [ ] All secrets are injected via a secrets manager — never committed to source control

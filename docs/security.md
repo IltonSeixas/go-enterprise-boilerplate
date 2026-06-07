@@ -47,23 +47,23 @@ Timing-safe comparison uses `subtle.ConstantTimeCompare` from the Go standard li
 
 ### Access Token (JWT HS256)
 
-- Algorithm: HS256 (HMAC-SHA256)
-- TTL: 15 minutes
-- Claims: `sub` (user ID), `iat`, `exp`, `jti` (unique token ID)
-- Storage: in-memory on the client — never in `localStorage` or cookies
+- Algorithm: HS256 (HMAC-SHA256) via `golang-jwt/jwt`
+- TTL: 15 minutes (`JWT_ACCESS_TTL`)
+- Claims: `sub` (user ID), `role`, `iat`, `exp`
+- Transport: returned in the JSON response body (`access_token`); the client is responsible for storage and for sending it as `Authorization: Bearer <token>`
 - Validation: signature + expiry checked on every authenticated request via Gin middleware
 
 ### Refresh Token
 
-- Format: opaque UUID v4 generated via `crypto/rand`
-- Storage: server-side in Redis with TTL 7 days
-- Transport: HttpOnly, Secure, SameSite=Strict cookie
+- Format: opaque UUID v4 via `uuid.New()`
+- Storage: server-side in Redis with TTL 7 days (`JWT_REFRESH_TTL`)
+- Transport: returned as a plain field (`refresh_token`) in the JSON response body — the client must store and resend it explicitly
 - Rotation: a new refresh token is issued on every use; the old one is immediately invalidated
 - Revocation: deleting the Redis key invalidates the session instantly
 
 ### Token Revocation
 
-Access tokens cannot be revoked before expiry (stateless by design). The 15-minute TTL limits the exposure window. If immediate revocation is required, implement a short-lived Redis blocklist for `jti` values.
+Access tokens cannot be revoked before expiry (stateless by design). The 15-minute TTL limits the exposure window. Refresh tokens, by contrast, are revocable instantly because they are stored server-side in Redis.
 
 ---
 
@@ -88,12 +88,11 @@ Applied globally via Gin middleware on every response:
 
 | Header | Value |
 |---|---|
-| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains` |
 | `X-Content-Type-Options` | `nosniff` |
 | `X-Frame-Options` | `DENY` |
-| `Content-Security-Policy` | `default-src 'none'` (API — no HTML served) |
-| `Referrer-Policy` | `no-referrer` |
-| `Permissions-Policy` | `geolocation=(), camera=(), microphone=()` |
+| `X-XSS-Protection` | `0` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
 
 ---
 
@@ -103,7 +102,10 @@ CORS is implemented as a small, dependency-free Gin middleware (`internal/interf
 
 ```go
 func CORS(allowedOrigins []string) gin.HandlerFunc {
-    allowed := toSet(allowedOrigins)
+    allowed := make(map[string]struct{}, len(allowedOrigins))
+    for _, origin := range allowedOrigins {
+        allowed[origin] = struct{}{}
+    }
 
     return func(c *gin.Context) {
         origin := c.GetHeader("Origin")
