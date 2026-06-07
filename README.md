@@ -95,14 +95,18 @@ go run ./cmd/server
 
 The server starts on `http://localhost:8080`. No database required.
 
-### Run with PostgreSQL
+### Persistence adapter
+
+The adapter is selected at runtime via the `ADAPTER` environment variable (`memory`, the default, or `postgres`):
 
 ```bash
 cp .env.example .env
-# Edit .env: set DATABASE_URL, JWT_SECRET, etc.
+# Edit .env: set ADAPTER=postgres, DATABASE_URL, JWT_SECRET, etc.
 
-go run ./cmd/server -adapter=postgres
+go run ./cmd/server
 ```
+
+> **Note**: the PostgreSQL adapter is not implemented yet — selecting `ADAPTER=postgres` currently fails fast at startup with an explicit error. The in-memory adapter is the only one available today; swap it for your own `UserRepository` implementation when you're ready for production persistence.
 
 ---
 
@@ -214,6 +218,7 @@ All configuration via environment variables or `.env` file (Viper reads both).
 | `JWT_SECRET` | — | HS256 signing key (min 32 chars) |
 | `JWT_ACCESS_TTL` | `15m` | Access token TTL (Go duration string) |
 | `JWT_REFRESH_TTL` | `168h` | Refresh token TTL (Go duration string) |
+| `ALLOWED_ORIGINS` | `http://localhost:3000` | Comma-separated CORS allow-list |
 | `OTLP_ENDPOINT` | `localhost:4317` | OTLP gRPC traces/metrics endpoint |
 
 ---
