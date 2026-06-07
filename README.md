@@ -154,11 +154,18 @@ The `PasswordHasher` interface in `domain/repository/` abstracts the algorithm f
 
 ### gRPC — `localhost:50051`
 
-Proto definitions in `proto/`. Regenerate with:
+Proto definitions live in `proto/boilerplate/v1/boilerplate.proto`. Generated stubs are committed under `internal/interface/grpc/proto/`; regenerate them with:
 
 ```bash
-make proto
+make proto  # requires protoc, protoc-gen-go and protoc-gen-go-grpc on PATH
 ```
+
+| Service | RPC | Mirrors |
+|---|---|---|
+| `AuthService` | `Register`, `Login`, `RefreshToken` | `/api/v1/auth/*` |
+| `UserService` | `GetMe`, `UpdateProfile`, `ChangePassword` | `/api/v1/users/*` |
+
+`UserService` RPCs require an `authorization: Bearer <access_token>` request metadata entry, validated by a unary interceptor that mirrors the REST `RequireAuth` middleware (active-account check included). Server reflection is enabled for easy inspection with tools like `grpcurl`.
 
 ---
 

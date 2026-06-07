@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/usecase"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/config"
@@ -18,6 +21,8 @@ import (
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/persistence/memory"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/security"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/telemetry"
+	grpcinterface "github.com/IltonSeixas/go-enterprise-boilerplate/internal/interface/grpc"
+	pb "github.com/IltonSeixas/go-enterprise-boilerplate/internal/interface/grpc/proto"
 	httpinterface "github.com/IltonSeixas/go-enterprise-boilerplate/internal/interface/http"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/interface/http/handler"
 )
@@ -72,17 +77,15 @@ func main() {
 		redisClient,
 	)
 
-	authHandler := handler.NewAuthHandler(
-		usecase.NewRegisterUser(userRepo, hasher, tokenSvc),
-		usecase.NewLoginUser(userRepo, hasher, tokenSvc),
-		usecase.NewRefreshToken(userRepo, tokenSvc),
-	)
+	registerUser := usecase.NewRegisterUser(userRepo, hasher, tokenSvc)
+	loginUser := usecase.NewLoginUser(userRepo, hasher, tokenSvc)
+	refreshToken := usecase.NewRefreshToken(userRepo, tokenSvc)
+	getUser := usecase.NewGetUser(userRepo)
+	updateProfile := usecase.NewUpdateProfile(userRepo)
+	changePassword := usecase.NewChangePassword(userRepo, hasher)
 
-	userHandler := handler.NewUserHandler(
-		usecase.NewGetUser(userRepo),
-		usecase.NewUpdateProfile(userRepo),
-		usecase.NewChangePassword(userRepo, hasher),
-	)
+	authHandler := handler.NewAuthHandler(registerUser, loginUser, refreshToken)
+	userHandler := handler.NewUserHandler(getUser, updateProfile, changePassword)
 
 	router := httpinterface.NewRouter(authHandler, userHandler, tokenSvc, userRepo)
 
@@ -94,13 +97,33 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	grpcAddr := fmt.Sprintf("%s:%d", cfg.Host, cfg.GRPCPort)
+	grpcListener, err := net.Listen("tcp", grpcAddr)
+	if err != nil {
+		log.Fatal("grpc listener error", zap.Error(err))
+	}
+
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(grpcinterface.UnaryAuthInterceptor(tokenSvc, userRepo)),
+	)
+	pb.RegisterAuthServiceServer(grpcServer, grpcinterface.NewAuthServer(registerUser, loginUser, refreshToken))
+	pb.RegisterUserServiceServer(grpcServer, grpcinterface.NewUserServer(getUser, updateProfile, changePassword))
+	reflection.Register(grpcServer)
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Info("server listening", zap.String("addr", srv.Addr))
+		log.Info("http server listening", zap.String("addr", srv.Addr))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("server error", zap.Error(err))
+		}
+	}()
+
+	go func() {
+		log.Info("grpc server listening", zap.String("addr", grpcAddr))
+		if err := grpcServer.Serve(grpcListener); err != nil {
+			log.Fatal("grpc server error", zap.Error(err))
 		}
 	}()
 
@@ -113,6 +136,8 @@ func main() {
 	if err := srv.Shutdown(shutCtx); err != nil {
 		log.Error("graceful shutdown failed", zap.Error(err))
 	}
+
+	grpcServer.GracefulStop()
 
 	if shutTrace != nil {
 		if err := shutTrace(shutCtx); err != nil {

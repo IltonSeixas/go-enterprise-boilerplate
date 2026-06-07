@@ -7,15 +7,16 @@ import (
 )
 
 type Config struct {
-	Host             string        `mapstructure:"HOST"`
-	Port             int           `mapstructure:"PORT"`
-	Adapter          string        `mapstructure:"ADAPTER"`
-	DatabaseURL      string        `mapstructure:"DATABASE_URL"`
-	RedisURL         string        `mapstructure:"REDIS_URL"`
-	JWTSecret        string        `mapstructure:"JWT_SECRET"`
-	JWTAccessTTL     time.Duration `mapstructure:"JWT_ACCESS_TTL"`
-	JWTRefreshTTL    time.Duration `mapstructure:"JWT_REFRESH_TTL"`
-	OTLPEndpoint     string        `mapstructure:"OTLP_ENDPOINT"`
+	Host          string        `mapstructure:"HOST"`
+	Port          int           `mapstructure:"PORT"`
+	GRPCPort      int           `mapstructure:"GRPC_PORT"`
+	Adapter       string        `mapstructure:"ADAPTER"`
+	DatabaseURL   string        `mapstructure:"DATABASE_URL"`
+	RedisURL      string        `mapstructure:"REDIS_URL"`
+	JWTSecret     string        `mapstructure:"JWT_SECRET"`
+	JWTAccessTTL  time.Duration `mapstructure:"JWT_ACCESS_TTL"`
+	JWTRefreshTTL time.Duration `mapstructure:"JWT_REFRESH_TTL"`
+	OTLPEndpoint  string        `mapstructure:"OTLP_ENDPOINT"`
 }
 
 func Load() (*Config, error) {
@@ -23,6 +24,7 @@ func Load() (*Config, error) {
 
 	viper.SetDefault("HOST", "0.0.0.0")
 	viper.SetDefault("PORT", 8080)
+	viper.SetDefault("GRPC_PORT", 50051)
 	viper.SetDefault("ADAPTER", "memory")
 	viper.SetDefault("REDIS_URL", "redis://localhost:6379")
 	viper.SetDefault("JWT_ACCESS_TTL", 15*time.Minute)
