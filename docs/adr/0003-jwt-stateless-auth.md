@@ -11,7 +11,7 @@ Authentication requires a balance between statelessness (horizontal scalability)
 
 ## Decision
 
-A hybrid model: stateless JWT HS256 access token (TTL 15 min) + opaque UUID refresh token stored in Redis (TTL 7 days, rotated on use, HttpOnly cookie).
+A hybrid model: stateless JWT HS256 access token (TTL 15 min, returned in the response body) + opaque UUID refresh token stored server-side in Redis (TTL 7 days, rotated on use, returned as a plain JSON field).
 
 ## Consequences
 

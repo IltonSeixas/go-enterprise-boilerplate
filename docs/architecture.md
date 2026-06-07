@@ -49,40 +49,44 @@ internal/
 │   │   ├── register_user.go
 │   │   ├── login_user.go
 │   │   ├── refresh_token.go
-│   │   └── logout_user.go
+│   │   ├── get_user.go
+│   │   ├── update_profile.go
+│   │   └── change_password.go
 │   ├── port/
 │   │   ├── password_hasher.go   # Interface: Hash + Verify
-│   │   └── token_issuer.go      # Interface: Issue + Validate JWT
+│   │   └── token_service.go     # Interface: GeneratePair + Validate + Refresh
 │   └── dto/
-│       ├── register_input.go
-│       └── auth_output.go
+│       ├── auth.go              # RegisterInput, LoginInput, RefreshInput, AuthOutput, ...
+│       └── user.go              # UpdateProfileInput, ChangePasswordInput, UserOutput, ...
 │
 ├── infrastructure/
 │   ├── persistence/
 │   │   ├── memory/
 │   │   │   └── user_repository.go
 │   │   └── postgres/
-│   │       └── user_repository.go
+│   │       └── user_repository.go   # pgx-based adapter (built but not wired by default)
 │   ├── security/
 │   │   ├── argon2_hasher.go
-│   │   └── jwt_service.go
-│   ├── cache/
-│   │   └── redis_store.go
+│   │   └── jwt_service.go           # Issues/validates JWTs; refresh tokens stored in Redis
 │   └── telemetry/
-│       └── setup.go
+│       └── setup.go                 # zap logger, OTLP tracing, Prometheus metrics
 │
 └── interface/
     ├── http/
     │   ├── router.go
     │   ├── middleware/
     │   │   ├── auth.go
+    │   │   ├── cors.go
     │   │   ├── rate_limit.go
     │   │   └── security_headers.go
     │   └── handler/
     │       ├── auth_handler.go
     │       └── user_handler.go
     └── grpc/
-        └── user_service.go
+        ├── auth_service.go
+        ├── user_service.go
+        ├── auth_interceptor.go
+        └── errors.go
 
 cmd/
 └── server/
@@ -116,8 +120,12 @@ func (e Email) String() string { return e.value }
 
 ```go
 type UserRepository interface {
+    FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error)
     FindByEmail(ctx context.Context, email valueobject.Email) (*entity.User, error)
     Save(ctx context.Context, user *entity.User) error
+    Delete(ctx context.Context, id uuid.UUID) error
+    Count(ctx context.Context) (int64, error)
+    SaveFirstOwner(ctx context.Context, user *entity.User) (bool, error)
 }
 ```
 
@@ -162,10 +170,13 @@ The in-memory adapter uses a `sync.RWMutex`-protected map and is production-equi
 var userRepo repository.UserRepository
 switch cfg.Adapter {
 case "postgres":
-    userRepo = postgres.NewUserRepository(pool)
+    log.Fatal("postgres adapter: set DATABASE_URL and rebuild with postgres tag")
 default:
+    log.Info("using in-memory adapter")
     userRepo = memory.NewUserRepository()
 }
 
 registerUser := usecase.NewRegisterUser(userRepo, hasher)
 ```
+
+The `postgres.UserRepository` adapter is fully implemented in `infrastructure/persistence/postgres/`, but `main.go` does not yet wire it up — selecting `ADAPTER=postgres` currently exits with a fatal error. Wiring it is a contribution opportunity; the adapter already satisfies the `UserRepository` port.
