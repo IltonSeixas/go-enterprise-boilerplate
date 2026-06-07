@@ -87,7 +87,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(registerUser, loginUser, refreshToken)
 	userHandler := handler.NewUserHandler(getUser, updateProfile, changePassword)
 
-	router := httpinterface.NewRouter(authHandler, userHandler, tokenSvc, userRepo)
+	router := httpinterface.NewRouter(authHandler, userHandler, tokenSvc, userRepo, cfg.AllowedOriginList())
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),

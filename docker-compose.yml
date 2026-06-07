@@ -2,16 +2,15 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "8080:8080"
       - "50051:50051"
     environment:
       ADAPTER: postgres
       DATABASE_URL: postgres://boilerplate:boilerplate@postgres:5432/boilerplate?sslmode=disable
       REDIS_URL: redis://redis:6379
       JWT_SECRET: dev-secret-change-in-production-min-32-chars
-      LOG_LEVEL: info
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
-      OTEL_SERVICE_NAME: go-enterprise-boilerplate
+      ALLOWED_ORIGINS: http://localhost:3000
+      OTLP_ENDPOINT: jaeger:4317
     depends_on:
       postgres:
         condition: service_healthy

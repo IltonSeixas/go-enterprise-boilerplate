@@ -9,8 +9,6 @@ Contributions are welcome. Please read this document before opening a pull reque
 - Go 1.22+
 - `govulncheck`: `go install golang.org/x/vuln/cmd/govulncheck@latest`
 - `staticcheck`: `go install honnef.co/go/tools/cmd/staticcheck@latest`
-- `mockgen`: `go install go.uber.org/mock/mockgen@latest`
-- Docker (for integration tests)
 
 ---
 
@@ -20,7 +18,7 @@ Contributions are welcome. Please read this document before opening a pull reque
 # Build
 go build ./...
 
-# Run all unit tests
+# Run all tests
 go test ./...
 
 # Run linter
@@ -31,12 +29,6 @@ go vet ./...
 
 # Security audit
 govulncheck ./...
-
-# Regenerate mocks (after interface changes)
-go generate ./...
-
-# Run integration tests (requires Docker)
-go test ./... -tags=integration
 ```
 
 All of the above run automatically in CI on every pull request. A PR will not be merged if any of these steps fail.
@@ -62,8 +54,8 @@ All of the above run automatically in CI on every pull request. A PR will not be
 ### Tests
 
 - New behavior requires a test written first (TDD)
-- Mock repositories via `gomock` — never use real infrastructure in unit tests
-- Integration tests must use isolated schemas and clean up via `t.Cleanup`
+- Use the hand-written stubs in `internal/testutil` to satisfy repository and service ports — never wire real infrastructure into a unit test
+- New stubs must implement the same port interface as the production adapter, keeping use case tests fully isolated
 
 ---
 

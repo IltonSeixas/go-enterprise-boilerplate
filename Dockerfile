@@ -20,10 +20,11 @@ FROM scratch AS runtime
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/boilerplate /boilerplate
 
-EXPOSE 3000 50051
+EXPOSE 8080 50051
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD ["/boilerplate", "healthcheck"]
+# No HEALTHCHECK: the runtime image is built FROM scratch and has no shell
+# or HTTP client to probe /health — rely on the orchestrator's liveness probe
+# against GET /health instead.
 
 USER 1001:1001
 

@@ -69,14 +69,14 @@ Access tokens cannot be revoked before expiry (stateless by design). The 15-minu
 
 ## Rate Limiting
 
-Implemented as Gin middleware using a sliding window counter per IP address stored in Redis.
+Implemented as in-process Gin middleware (`internal/interface/http/middleware/rate_limit.go`) using a per-IP token bucket from `golang.org/x/time/rate` — no external store required.
 
 ```
-Default: 100 requests / 60 seconds per IP
-Configurable via: RATE_LIMIT_RPS environment variable
+Global default:    100 requests/sec, burst 20, per IP
+/v1/auth/* default: 10 requests/sec, burst 5, per IP
 ```
 
-Authentication endpoints have a stricter independent limit to mitigate credential stuffing.
+The stricter limit on authentication endpoints mitigates credential stuffing and brute-force attacks. Limits are wired in `NewRouter` and can be tuned by changing the `rate.Limit`/burst arguments passed to `middleware.RateLimit`.
 
 On limit exceeded, the server returns `429 Too Many Requests` with a `Retry-After` header.
 
@@ -99,14 +99,27 @@ Applied globally via Gin middleware on every response:
 
 ## CORS
 
-CORS is configured with an explicit allow-list. The wildcard `*` is never permitted in production.
+CORS is implemented as a small, dependency-free Gin middleware (`internal/interface/http/middleware/cors.go`) backed by an explicit origin allow-list read from the `ALLOWED_ORIGINS` environment variable. The wildcard `*` is never honored — an `Origin` header that doesn't match the allow-list simply receives no CORS headers.
 
 ```go
-config := cors.Config{
-    AllowOrigins:     cfg.AllowedOrigins, // from environment variable
-    AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-    AllowHeaders:     []string{"Authorization", "Content-Type"},
-    AllowCredentials: true,
+func CORS(allowedOrigins []string) gin.HandlerFunc {
+    allowed := toSet(allowedOrigins)
+
+    return func(c *gin.Context) {
+        origin := c.GetHeader("Origin")
+        if _, ok := allowed[origin]; ok {
+            c.Header("Access-Control-Allow-Origin", origin)
+            c.Header("Access-Control-Allow-Credentials", "true")
+            c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+            c.Header("Vary", "Origin")
+        }
+        if c.Request.Method == http.MethodOptions {
+            c.AbortWithStatus(http.StatusNoContent)
+            return
+        }
+        c.Next()
+    }
 }
 ```
 
@@ -122,7 +135,7 @@ Domain-level invariants are re-enforced inside value object constructors regardl
 
 ## SQL Injection Prevention
 
-All database queries use `pgx` with parameterized queries or `squirrel` query builder. String formatting into SQL is never used.
+All database queries use `pgx` with parameterized raw SQL (`$1`, `$2`, ... placeholders). String formatting into SQL is never used.
 
 ```go
 rows, err := pool.Query(ctx,
@@ -138,7 +151,7 @@ rows, err := pool.Query(ctx,
 - Passwords are never logged, never returned in API responses, and never stored in plain text
 - Tokens are never logged
 - Error responses to clients contain a message and an error code — never internal details, stack traces, or database errors
-- `slog` level must never be set to `Debug` in production (would expose request bodies)
+- The `zap` logger must never run at `Debug` level in production (would expose request bodies)
 
 ---
 
