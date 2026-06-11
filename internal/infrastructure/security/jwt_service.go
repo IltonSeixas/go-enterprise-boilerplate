@@ -20,10 +20,10 @@ type jwtClaims struct {
 }
 
 type JWTService struct {
-	secret          []byte
-	accessTTL       time.Duration
-	refreshTTL      time.Duration
-	redis           *redis.Client
+	secret     []byte
+	accessTTL  time.Duration
+	refreshTTL time.Duration
+	redis      *redis.Client
 }
 
 func NewJWTService(secret string, accessTTL, refreshTTL time.Duration, redis *redis.Client) *JWTService {
