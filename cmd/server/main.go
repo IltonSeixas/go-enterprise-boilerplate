@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -19,6 +20,7 @@ import (
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/config"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/repository"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/persistence/memory"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/persistence/postgres"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/security"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/telemetry"
 	grpcinterface "github.com/IltonSeixas/go-enterprise-boilerplate/internal/interface/grpc"
@@ -63,7 +65,18 @@ func main() {
 	var userRepo repository.UserRepository
 	switch cfg.Adapter {
 	case "postgres":
-		log.Fatal("postgres adapter: set DATABASE_URL and rebuild with postgres tag")
+		pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+		if err != nil {
+			log.Fatal("postgres connection error", zap.Error(err))
+		}
+		defer pool.Close()
+
+		if err := postgres.Migrate(ctx, pool); err != nil {
+			log.Fatal("postgres migration error", zap.Error(err))
+		}
+
+		log.Info("using postgres adapter")
+		userRepo = postgres.NewUserRepository(pool)
 	default:
 		log.Info("using in-memory adapter")
 		userRepo = memory.NewUserRepository()

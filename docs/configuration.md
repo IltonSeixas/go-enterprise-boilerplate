@@ -24,7 +24,7 @@ cp .env.example .env
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ADAPTER` | No | `memory` | Persistence adapter: `memory` or `postgres`. The `postgres` adapter is implemented but not yet wired into `main.go` — selecting it currently exits with a fatal error |
+| `ADAPTER` | No | `memory` | Persistence adapter: `memory` or `postgres`. When `postgres` is selected, schema migrations are applied automatically at startup |
 | `DATABASE_URL` | If `postgres` | — | PostgreSQL DSN (`postgres://user:pass@host/db`) |
 
 ### Cache
@@ -60,7 +60,7 @@ cp .env.example .env
 Before deploying to production:
 
 - [ ] `JWT_SECRET` is a random value of at least 32 characters — never reuse development values
-- [ ] `DATABASE_URL` includes TLS parameters (`sslmode=require`) — if you have wired up the postgres adapter
+- [ ] `DATABASE_URL` includes TLS parameters (`sslmode=require`) when `ADAPTER=postgres`
 - [ ] `REDIS_URL` uses a password-protected Redis instance
 - [ ] `ALLOWED_ORIGINS` lists only your actual frontend domains
 - [ ] `OTLP_ENDPOINT` points to your observability backend

@@ -1,5 +1,3 @@
-> **Work in progress** — this project is under active development and is not yet production-ready.
-
 # go-enterprise-boilerplate
 
 [![CI](https://github.com/IltonSeixas/go-enterprise-boilerplate/actions/workflows/ci.yml/badge.svg)](https://github.com/IltonSeixas/go-enterprise-boilerplate/actions/workflows/ci.yml)
@@ -82,7 +80,7 @@ infrastructure/ → application/ → domain/
 
 ### Prerequisites
 
-- Go 1.22+
+- Go 1.24+
 - Optional for production: PostgreSQL 15+, Redis 7+
 
 ### Run immediately (in-memory, zero config)
@@ -106,7 +104,7 @@ cp .env.example .env
 go run ./cmd/server
 ```
 
-> **Note**: the PostgreSQL adapter is not implemented yet — selecting `ADAPTER=postgres` currently fails fast at startup with an explicit error. The in-memory adapter is the only one available today; swap it for your own `UserRepository` implementation when you're ready for production persistence.
+> **Note**: when `ADAPTER=postgres`, the server connects using `DATABASE_URL` and applies the embedded schema migrations automatically on startup.
 
 ---
 

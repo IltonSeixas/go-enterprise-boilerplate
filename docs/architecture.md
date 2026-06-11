@@ -170,7 +170,18 @@ The in-memory adapter uses a `sync.RWMutex`-protected map and is production-equi
 var userRepo repository.UserRepository
 switch cfg.Adapter {
 case "postgres":
-    log.Fatal("postgres adapter: set DATABASE_URL and rebuild with postgres tag")
+    pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+    if err != nil {
+        log.Fatal("postgres connection error", zap.Error(err))
+    }
+    defer pool.Close()
+
+    if err := postgres.Migrate(ctx, pool); err != nil {
+        log.Fatal("postgres migration error", zap.Error(err))
+    }
+
+    log.Info("using postgres adapter")
+    userRepo = postgres.NewUserRepository(pool)
 default:
     log.Info("using in-memory adapter")
     userRepo = memory.NewUserRepository()
@@ -179,4 +190,4 @@ default:
 registerUser := usecase.NewRegisterUser(userRepo, hasher)
 ```
 
-The `postgres.UserRepository` adapter is fully implemented in `infrastructure/persistence/postgres/`, but `main.go` does not yet wire it up — selecting `ADAPTER=postgres` currently exits with a fatal error. Wiring it is a contribution opportunity; the adapter already satisfies the `UserRepository` port.
+The `postgres.UserRepository` adapter, defined in `infrastructure/persistence/postgres/`, satisfies the `UserRepository` port and is wired in `main.go` when `ADAPTER=postgres`. Schema migrations are embedded via `internal/infrastructure/persistence/postgres/migrations/` and applied automatically at startup with `postgres.Migrate`.
