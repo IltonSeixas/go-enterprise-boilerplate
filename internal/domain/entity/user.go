@@ -118,14 +118,14 @@ func (u *User) Activate() {
 	u.updatedAt = time.Now().UTC()
 }
 
-func (u *User) ID() valueobject.UserID           { return u.id }
-func (u *User) Email() valueobject.Email          { return u.email }
+func (u *User) ID() valueobject.UserID                 { return u.id }
+func (u *User) Email() valueobject.Email               { return u.email }
 func (u *User) PasswordHash() valueobject.PasswordHash { return u.passwordHash }
-func (u *User) Name() string                      { return u.name }
-func (u *User) Role() Role                        { return u.role }
-func (u *User) IsActive() bool                    { return u.isActive }
-func (u *User) CreatedAt() time.Time              { return u.createdAt }
-func (u *User) UpdatedAt() time.Time              { return u.updatedAt }
+func (u *User) Name() string                           { return u.name }
+func (u *User) Role() Role                             { return u.role }
+func (u *User) IsActive() bool                         { return u.isActive }
+func (u *User) CreatedAt() time.Time                   { return u.createdAt }
+func (u *User) UpdatedAt() time.Time                   { return u.updatedAt }
 
 func validateName(name string) error {
 	trimmed := strings.TrimSpace(name)

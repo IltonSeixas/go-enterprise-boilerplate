@@ -6,7 +6,7 @@ Contributions are welcome. Please read this document before opening a pull reque
 
 ## Prerequisites
 
-- Go 1.22+
+- Go 1.24+
 - `govulncheck`: `go install golang.org/x/vuln/cmd/govulncheck@latest`
 - `staticcheck`: `go install honnef.co/go/tools/cmd/staticcheck@latest`
 
