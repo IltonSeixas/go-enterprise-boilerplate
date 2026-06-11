@@ -34,6 +34,15 @@ func Load() (*Config, error) {
 	viper.SetDefault("OTLP_ENDPOINT", "localhost:4317")
 	viper.SetDefault("ALLOWED_ORIGINS", "http://localhost:3000")
 
+	// viper.AutomaticEnv only binds keys it already knows about, so keys
+	// with no default must be bound explicitly to be read from the
+	// environment.
+	for _, key := range []string{"DATABASE_URL", "JWT_SECRET"} {
+		if err := viper.BindEnv(key); err != nil {
+			return nil, err
+		}
+	}
+
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
