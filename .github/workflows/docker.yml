@@ -15,25 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Temporary debug step: confirms the actor/repository the token is
-      # scoped to, and probes GHCR auth directly to see the raw response
-      # before docker/build-push-action obscures it behind buildx errors.
-      - name: Debug GHCR auth
-        env:
-          GH_ACTOR: ${{ github.actor }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          echo "github.actor=$GH_ACTOR"
-          echo "github.repository=$GH_REPO"
-          echo "github.repository_owner=${{ github.repository_owner }}"
-          printf 'machine ghcr.io login %s password %s\n' "$GH_ACTOR" "$GH_TOKEN" > "$RUNNER_TEMP/netrc"
-          chmod 600 "$RUNNER_TEMP/netrc"
-          curl -sS -o /dev/null -w 'token endpoint: %{http_code}\n' \
-            --netrc-file "$RUNNER_TEMP/netrc" \
-            "https://ghcr.io/token?service=ghcr.io&scope=repository:$GH_REPO:pull,push"
-          rm -f "$RUNNER_TEMP/netrc"
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
