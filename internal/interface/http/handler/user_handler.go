@@ -133,7 +133,7 @@ func (h *UserHandler) ChangeRole(c *gin.Context) {
 		return
 	}
 
-	if !claims.Role.CanManageRoles() {
+	if claims.Role != entity.RoleOwner {
 		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
 		return
 	}
