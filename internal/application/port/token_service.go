@@ -19,6 +19,7 @@ type AccessTokenClaims struct {
 type TokenService interface {
 	GeneratePair(userID uuid.UUID, role entity.Role) (TokenPair, error)
 	ValidateAccessToken(token string) (AccessTokenClaims, error)
+	FindUserIDByRefreshToken(token string) (uuid.UUID, bool, error)
 	RotateRefreshToken(oldToken string, userID uuid.UUID, role entity.Role) (TokenPair, error)
 	RevokeRefreshToken(token string) error
 }

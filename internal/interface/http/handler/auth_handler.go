@@ -92,7 +92,8 @@ func domainStatus(err error) int {
 	switch err {
 	case apperror.ErrInvalidEmail,
 		apperror.ErrInvalidPassword,
-		apperror.ErrInvalidName:
+		apperror.ErrInvalidName,
+		apperror.ErrInvalidRole:
 		return http.StatusUnprocessableEntity
 	case apperror.ErrEmailAlreadyExists:
 		return http.StatusConflict

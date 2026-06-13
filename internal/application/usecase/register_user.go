@@ -26,8 +26,8 @@ func NewRegisterUser(
 }
 
 func (uc *RegisterUser) Execute(ctx context.Context, in dto.RegisterInput) (dto.AuthOutput, error) {
-	if len(in.Password) < 12 || len(in.Password) > 128 {
-		return dto.AuthOutput{}, apperror.ErrInvalidPassword
+	if err := valueobject.ValidatePassword(in.Password); err != nil {
+		return dto.AuthOutput{}, err
 	}
 
 	email, err := valueobject.NewEmail(in.Email)

@@ -149,6 +149,7 @@ The `PasswordHasher` interface in `domain/repository/` abstracts the algorithm f
 | `PUT` | `/v1/users/me` | Update authenticated user profile |
 | `PUT` | `/v1/users/me/password` | Change authenticated user password |
 | `GET` | `/v1/users/:id` | Get user by ID |
+| `PUT` | `/v1/users/:id/role` | Change a user's role (Owner/Admin only) |
 | `GET` | `/health` | Liveness check |
 | `GET` | `/ready` | Readiness check |
 | `GET` | `/metrics` | Prometheus metrics |
@@ -164,7 +165,7 @@ make proto  # requires protoc, protoc-gen-go and protoc-gen-go-grpc on PATH
 | Service | RPC | Mirrors |
 |---|---|---|
 | `AuthService` | `Register`, `Login`, `RefreshToken` | `/v1/auth/*` |
-| `UserService` | `GetMe`, `UpdateProfile`, `ChangePassword` | `/v1/users/*` |
+| `UserService` | `GetMe`, `UpdateProfile`, `ChangePassword`, `ChangeRole` | `/v1/users/*` |
 
 `UserService` RPCs require an `authorization: Bearer <access_token>` request metadata entry, validated by a unary interceptor that mirrors the REST `RequireAuth` middleware (active-account check included). Server reflection is enabled for easy inspection with tools like `grpcurl`.
 

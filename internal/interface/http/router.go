@@ -48,6 +48,7 @@ func NewRouter(
 			protected.PUT("/me", userH.UpdateMe)
 			protected.PUT("/me/password", userH.ChangePassword)
 			protected.GET("/:id", userH.GetUser)
+			protected.PUT("/:id/role", userH.ChangeRole)
 		}
 	}
 
