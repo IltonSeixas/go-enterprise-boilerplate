@@ -184,7 +184,7 @@ func TestUserHandler_ChangePassword_WithValidBody_ReturnsNoContent(t *testing.T)
 	h := newUserHandler(repo)
 	body, err := json.Marshal(map[string]string{
 		"current_password": "old-password",
-		"new_password":      "New-Password-123",
+		"new_password":     "New-Password-123",
 	})
 	require.NoError(t, err)
 
