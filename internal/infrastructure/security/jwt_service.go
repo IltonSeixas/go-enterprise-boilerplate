@@ -89,6 +89,23 @@ func (s *JWTService) ValidateAccessToken(token string) (port.AccessTokenClaims, 
 	return port.AccessTokenClaims{UserID: userID, Role: claims.Role}, nil
 }
 
+func (s *JWTService) FindUserIDByRefreshToken(token string) (uuid.UUID, bool, error) {
+	stored, err := s.redis.Get(context.Background(), refreshKey(token)).Result()
+	if err == redis.Nil {
+		return uuid.UUID{}, false, nil
+	}
+	if err != nil {
+		return uuid.UUID{}, false, apperror.ErrInternal
+	}
+
+	userID, err := uuid.Parse(stored)
+	if err != nil {
+		return uuid.UUID{}, false, apperror.ErrTokenInvalid
+	}
+
+	return userID, true, nil
+}
+
 func (s *JWTService) RotateRefreshToken(oldToken string, userID uuid.UUID, role entity.Role) (port.TokenPair, error) {
 	ctx := context.Background()
 	stored, err := s.redis.Get(ctx, refreshKey(oldToken)).Result()

@@ -19,14 +19,14 @@ func NewRefreshToken(users repository.UserRepository, tokens port.TokenService) 
 }
 
 func (uc *RefreshToken) Execute(ctx context.Context, in dto.RefreshInput) (dto.AuthOutput, error) {
-	claims, err := uc.tokens.ValidateAccessToken(in.RefreshToken)
-	if err != nil {
+	userID, found, err := uc.tokens.FindUserIDByRefreshToken(in.RefreshToken)
+	if err != nil || !found {
 		return dto.AuthOutput{}, apperror.ErrInvalidCredentials
 	}
 
-	user, err := uc.users.FindByID(ctx, claims.UserID)
+	user, err := uc.users.FindByID(ctx, userID)
 	if err != nil {
-		return dto.AuthOutput{}, apperror.ErrInvalidCredentials
+		return dto.AuthOutput{}, apperror.ErrUserNotFound
 	}
 
 	if !user.IsActive() {
@@ -34,7 +34,7 @@ func (uc *RefreshToken) Execute(ctx context.Context, in dto.RefreshInput) (dto.A
 		return dto.AuthOutput{}, apperror.ErrAccountInactive
 	}
 
-	pair, err := uc.tokens.RotateRefreshToken(in.RefreshToken, claims.UserID, user.Role())
+	pair, err := uc.tokens.RotateRefreshToken(in.RefreshToken, userID, user.Role())
 	if err != nil {
 		return dto.AuthOutput{}, apperror.ErrInvalidCredentials
 	}
