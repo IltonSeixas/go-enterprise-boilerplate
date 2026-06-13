@@ -18,7 +18,8 @@ func toStatus(err error) error {
 	switch {
 	case errors.Is(err, apperror.ErrInvalidEmail),
 		errors.Is(err, apperror.ErrInvalidPassword),
-		errors.Is(err, apperror.ErrInvalidName):
+		errors.Is(err, apperror.ErrInvalidName),
+		errors.Is(err, apperror.ErrInvalidRole):
 		code = codes.InvalidArgument
 	case errors.Is(err, apperror.ErrEmailAlreadyExists):
 		code = codes.AlreadyExists

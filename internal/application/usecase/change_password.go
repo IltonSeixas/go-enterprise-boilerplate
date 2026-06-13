@@ -9,6 +9,7 @@ import (
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/port"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/apperror"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/repository"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/valueobject"
 )
 
 type ChangePassword struct {
@@ -21,8 +22,8 @@ func NewChangePassword(users repository.UserRepository, hasher port.PasswordHash
 }
 
 func (uc *ChangePassword) Execute(ctx context.Context, id uuid.UUID, in dto.ChangePasswordInput) error {
-	if len(in.NewPassword) < 12 || len(in.NewPassword) > 128 {
-		return apperror.ErrInvalidPassword
+	if err := valueobject.ValidatePassword(in.NewPassword); err != nil {
+		return err
 	}
 
 	user, err := uc.users.FindByID(ctx, id)
