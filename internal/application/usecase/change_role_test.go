@@ -61,6 +61,17 @@ func TestChangeUserRole_RejectsWhenActorLacksPermission(t *testing.T) {
 	assert.ErrorIs(t, err, apperror.ErrInsufficientPerms)
 }
 
+func TestChangeUserRole_RejectsWhenActorChangesOwnRole(t *testing.T) {
+	repo := testutil.NewStubUserRepo()
+	owner := userWithRole(t, "owner@example.com", entity.RoleOwner)
+	require.NoError(t, repo.Save(context.Background(), owner))
+
+	uc := usecase.NewChangeUserRole(repo)
+	_, err := uc.Execute(context.Background(), owner.ID().UUID(), owner.ID().UUID(), dto.ChangeRoleInput{Role: entity.RoleAdmin})
+
+	assert.ErrorIs(t, err, apperror.ErrInsufficientPerms)
+}
+
 func TestChangeUserRole_OwnerPromotesUserToAdminAndPersists(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	actor := userWithRole(t, "owner@example.com", entity.RoleOwner)

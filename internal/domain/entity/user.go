@@ -20,17 +20,6 @@ func (r Role) CanManageRoles() bool {
 	return r == RoleOwner || r == RoleAdmin
 }
 
-func (r Role) CanPromoteTo(target Role) bool {
-	switch r {
-	case RoleOwner:
-		return true
-	case RoleAdmin:
-		return target == RoleUser
-	default:
-		return false
-	}
-}
-
 // ParseRole validates and converts a raw string into a known Role.
 func ParseRole(s string) (Role, error) {
 	switch Role(s) {
@@ -110,7 +99,7 @@ func (u *User) UpdatePassword(hash valueobject.PasswordHash) {
 }
 
 func (u *User) ChangeRole(newRole Role, actor *User) error {
-	if !actor.role.CanPromoteTo(newRole) {
+	if actor.role != RoleOwner || actor.id == u.id {
 		return apperror.ErrInsufficientPerms
 	}
 	u.role = newRole

@@ -78,7 +78,7 @@ func (s *UserServer) ChangeRole(ctx context.Context, req *pb.ChangeRoleRequest) 
 		return nil, status.Error(codes.Unauthenticated, "missing bearer token")
 	}
 
-	if !caller.Role.CanManageRoles() {
+	if caller.Role != entity.RoleOwner {
 		return nil, status.Error(codes.PermissionDenied, "insufficient permissions")
 	}
 
