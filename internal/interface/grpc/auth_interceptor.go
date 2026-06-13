@@ -31,6 +31,7 @@ var methodsRequiringAuth = map[string]bool{
 	"/boilerplate.v1.UserService/GetMe":          true,
 	"/boilerplate.v1.UserService/UpdateProfile":  true,
 	"/boilerplate.v1.UserService/ChangePassword": true,
+	"/boilerplate.v1.UserService/ChangeRole":     true,
 }
 
 // UnaryAuthInterceptor validates the `authorization: Bearer <token>` request
