@@ -45,16 +45,22 @@ func TestDeactivate(t *testing.T) {
 	assert.False(t, u.IsActive())
 }
 
-func TestChangeRole_AdminCannotPromoteToAdmin(t *testing.T) {
+func TestChangeRole_AdminCannotChangeRoles(t *testing.T) {
 	target := makeUser(t, entity.RoleUser)
 	actor := makeUser(t, entity.RoleAdmin)
 	err := target.ChangeRole(entity.RoleAdmin, actor)
 	assert.ErrorIs(t, err, apperror.ErrInsufficientPerms)
 }
 
-func TestChangeRole_OwnerCanPromoteToAny(t *testing.T) {
+func TestChangeRole_OwnerCanChangeAnotherUsersRole(t *testing.T) {
 	target := makeUser(t, entity.RoleUser)
 	actor := makeUser(t, entity.RoleOwner)
 	require.NoError(t, target.ChangeRole(entity.RoleAdmin, actor))
 	assert.Equal(t, entity.RoleAdmin, target.Role())
+}
+
+func TestChangeRole_OwnerCannotChangeOwnRole(t *testing.T) {
+	owner := makeUser(t, entity.RoleOwner)
+	err := owner.ChangeRole(entity.RoleAdmin, owner)
+	assert.ErrorIs(t, err, apperror.ErrInsufficientPerms)
 }
