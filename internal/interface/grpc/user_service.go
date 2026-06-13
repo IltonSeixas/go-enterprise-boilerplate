@@ -3,11 +3,13 @@ package grpc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/dto"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/usecase"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/entity"
 	pb "github.com/IltonSeixas/go-enterprise-boilerplate/internal/interface/grpc/proto"
 )
 
@@ -21,10 +23,11 @@ type UserServer struct {
 	getUser        *usecase.GetUser
 	updateProfile  *usecase.UpdateProfile
 	changePassword *usecase.ChangePassword
+	changeRole     *usecase.ChangeUserRole
 }
 
-func NewUserServer(getUser *usecase.GetUser, updateProfile *usecase.UpdateProfile, changePassword *usecase.ChangePassword) *UserServer {
-	return &UserServer{getUser: getUser, updateProfile: updateProfile, changePassword: changePassword}
+func NewUserServer(getUser *usecase.GetUser, updateProfile *usecase.UpdateProfile, changePassword *usecase.ChangePassword, changeRole *usecase.ChangeUserRole) *UserServer {
+	return &UserServer{getUser: getUser, updateProfile: updateProfile, changePassword: changePassword, changeRole: changeRole}
 }
 
 func (s *UserServer) GetMe(ctx context.Context, _ *pb.GetMeRequest) (*pb.UserResponse, error) {
@@ -67,6 +70,33 @@ func (s *UserServer) ChangePassword(ctx context.Context, req *pb.ChangePasswordR
 		return nil, toStatus(err)
 	}
 	return &pb.ChangePasswordResponse{}, nil
+}
+
+func (s *UserServer) ChangeRole(ctx context.Context, req *pb.ChangeRoleRequest) (*pb.UserResponse, error) {
+	caller, ok := callerFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing bearer token")
+	}
+
+	if !caller.Role.CanManageRoles() {
+		return nil, status.Error(codes.PermissionDenied, "insufficient permissions")
+	}
+
+	targetID, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user id")
+	}
+
+	role, err := entity.ParseRole(req.GetRole())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid role")
+	}
+
+	out, err := s.changeRole.Execute(ctx, caller.ID, targetID, dto.ChangeRoleInput{Role: role})
+	if err != nil {
+		return nil, toStatus(err)
+	}
+	return toUserResponse(out), nil
 }
 
 func toUserResponse(out dto.UserOutput) *pb.UserResponse {

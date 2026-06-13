@@ -53,13 +53,14 @@ func startServer(t *testing.T) (clients, func()) {
 	getUser := usecase.NewGetUser(repo)
 	updateProfile := usecase.NewUpdateProfile(repo)
 	changePassword := usecase.NewChangePassword(repo, hasher)
+	changeRole := usecase.NewChangeUserRole(repo)
 
 	lis := bufconn.Listen(bufSize)
 	srv := grpc.NewServer(
 		grpc.UnaryInterceptor(grpcinterface.UnaryAuthInterceptor(tokens, repo)),
 	)
 	pb.RegisterAuthServiceServer(srv, grpcinterface.NewAuthServer(registerUser, loginUser, refreshToken))
-	pb.RegisterUserServiceServer(srv, grpcinterface.NewUserServer(getUser, updateProfile, changePassword))
+	pb.RegisterUserServiceServer(srv, grpcinterface.NewUserServer(getUser, updateProfile, changePassword, changeRole))
 
 	go func() {
 		_ = srv.Serve(lis)

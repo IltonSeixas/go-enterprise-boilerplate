@@ -13,4 +13,5 @@ var (
 	ErrInsufficientPerms  = errors.New("insufficient permissions")
 	ErrInternal           = errors.New("internal error")
 	ErrTokenInvalid       = errors.New("token is invalid or expired")
+	ErrInvalidRole        = errors.New("invalid role")
 )

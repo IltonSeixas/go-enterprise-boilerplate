@@ -31,6 +31,16 @@ func (r Role) CanPromoteTo(target Role) bool {
 	}
 }
 
+// ParseRole validates and converts a raw string into a known Role.
+func ParseRole(s string) (Role, error) {
+	switch Role(s) {
+	case RoleOwner, RoleAdmin, RoleUser:
+		return Role(s), nil
+	default:
+		return "", apperror.ErrInvalidRole
+	}
+}
+
 type User struct {
 	id           valueobject.UserID
 	email        valueobject.Email
