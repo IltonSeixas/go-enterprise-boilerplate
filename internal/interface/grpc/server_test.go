@@ -5,6 +5,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -113,6 +114,77 @@ func TestUserService_UpdateProfile_PersistsNewName(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "Updated Name", resp.GetName())
+}
+
+func TestUserService_ChangeRole_RequiresBearerToken(t *testing.T) {
+	c, cleanup := startServer(t)
+	defer cleanup()
+
+	_, err := c.user.ChangeRole(context.Background(), &pb.ChangeRoleRequest{
+		UserId: uuid.NewString(),
+		Role:   string(entity.RoleAdmin),
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing bearer token")
+}
+
+func TestUserService_ChangeRole_OwnerCanPromoteAnotherUser(t *testing.T) {
+	repo := testutil.NewStubUserRepo()
+	hasher := testutil.NewStubHasher()
+
+	ownerEmail, err := valueobject.NewEmail("owner@example.com")
+	require.NoError(t, err)
+	hash := valueobject.NewPasswordHashFromPHC("$argon2id$stub")
+	owner, err := entity.NewUser(ownerEmail, hash, "Owner User", entity.RoleOwner)
+	require.NoError(t, err)
+	require.NoError(t, repo.Save(context.Background(), owner))
+
+	targetEmail, err := valueobject.NewEmail("target@example.com")
+	require.NoError(t, err)
+	target, err := entity.NewUser(targetEmail, hash, "Target User", entity.RoleUser)
+	require.NoError(t, err)
+	require.NoError(t, repo.Save(context.Background(), target))
+
+	tokens := testutil.NewStubTokenServiceWithClaims("owner-token", port.AccessTokenClaims{
+		UserID: owner.ID().UUID(),
+		Role:   entity.RoleOwner,
+	})
+
+	getUser := usecase.NewGetUser(repo)
+	updateProfile := usecase.NewUpdateProfile(repo)
+	changePassword := usecase.NewChangePassword(repo, hasher)
+	changeRole := usecase.NewChangeUserRole(repo)
+
+	lis := bufconn.Listen(bufSize)
+	srv := grpc.NewServer(
+		grpc.UnaryInterceptor(grpcinterface.UnaryAuthInterceptor(tokens, repo)),
+	)
+	pb.RegisterUserServiceServer(srv, grpcinterface.NewUserServer(getUser, updateProfile, changePassword, changeRole))
+
+	go func() {
+		_ = srv.Serve(lis)
+	}()
+	defer srv.Stop()
+
+	dialer := func(context.Context, string) (net.Conn, error) { return lis.Dial() }
+	conn, err := grpc.NewClient("passthrough:///bufnet",
+		grpc.WithContextDialer(dialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	client := pb.NewUserServiceClient(conn)
+
+	ctx := withBearerToken(context.Background(), "owner-token")
+	resp, err := client.ChangeRole(ctx, &pb.ChangeRoleRequest{
+		UserId: target.ID().UUID().String(),
+		Role:   string(entity.RoleAdmin),
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, string(entity.RoleAdmin), resp.GetRole())
 }
 
 func TestAuthService_Register_RejectsDuplicateEmail(t *testing.T) {
