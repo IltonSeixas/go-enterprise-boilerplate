@@ -30,6 +30,8 @@ func (uc *RefreshToken) Execute(ctx context.Context, in dto.RefreshInput) (dto.A
 	}
 
 	if !user.IsActive() {
+		// Best-effort revoke: the account is already being denied via ErrAccountInactive below,
+		// so a revoke failure here must not change the response or leak storage details to the caller.
 		_ = uc.tokens.RevokeRefreshToken(in.RefreshToken)
 		return dto.AuthOutput{}, apperror.ErrAccountInactive
 	}
