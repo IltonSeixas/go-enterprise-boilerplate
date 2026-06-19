@@ -8,9 +8,13 @@ services:
       ADAPTER: postgres
       DATABASE_URL: postgres://boilerplate:boilerplate@postgres:5432/boilerplate?sslmode=disable
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: dev-secret-change-in-production-min-32-chars
+      JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private.pem
+      JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
       ALLOWED_ORIGINS: http://localhost:3000
       OTLP_ENDPOINT: jaeger:4317
+    volumes:
+      - ./jwt_private.pem:/run/secrets/jwt_private.pem:ro
+      - ./jwt_public.pem:/run/secrets/jwt_public.pem:ro
     depends_on:
       postgres:
         condition: service_healthy

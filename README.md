@@ -83,11 +83,14 @@ infrastructure/ → application/ → domain/
 - Go 1.25+ (Docker builds use 1.26.4)
 - Optional for production: PostgreSQL 15+, Redis 7+
 
-### Run immediately (in-memory, zero config)
+### Run immediately (in-memory, zero database)
 
 ```bash
 git clone https://github.com/your-org/go-enterprise-boilerplate
 cd go-enterprise-boilerplate
+cp .env.example .env
+openssl genpkey -algorithm ed25519 -out jwt_private.pem
+openssl pkey -in jwt_private.pem -pubout -out jwt_public.pem
 go run ./cmd/server
 ```
 
@@ -99,7 +102,7 @@ The adapter is selected at runtime via the `ADAPTER` environment variable (`memo
 
 ```bash
 cp .env.example .env
-# Edit .env: set ADAPTER=postgres, DATABASE_URL, JWT_SECRET, etc.
+# Edit .env: set ADAPTER=postgres, DATABASE_URL, JWT_PRIVATE_KEY_PATH, JWT_PUBLIC_KEY_PATH, etc.
 
 go run ./cmd/server
 ```
@@ -123,7 +126,7 @@ The `PasswordHasher` interface in `domain/repository/` abstracts the algorithm f
 
 ### Authentication Flow
 
-- **Access token**: JWT HS256, TTL 15 min, validated on every authenticated request
+- **Access token**: JWT EdDSA (Ed25519), TTL 15 min, validated on every authenticated request
 - **Refresh token**: opaque UUID, stored in Redis with TTL 7 days, rotated on every use
 - **Revocation**: deleting the Redis entry immediately invalidates the session
 
@@ -214,7 +217,8 @@ All configuration via environment variables or `.env` file (Viper reads both).
 | `ADAPTER` | `memory` | Persistence adapter: `memory` or `postgres` |
 | `DATABASE_URL` | — | PostgreSQL DSN (required when `ADAPTER=postgres`) |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection URL (refresh token storage) |
-| `JWT_SECRET` | — | HS256 signing key (min 32 chars) |
+| `JWT_PRIVATE_KEY_PATH` | — | Path to the Ed25519 PEM private key used to sign access tokens |
+| `JWT_PUBLIC_KEY_PATH` | — | Path to the Ed25519 PEM public key used to verify access tokens |
 | `JWT_ACCESS_TTL` | `15m` | Access token TTL (Go duration string) |
 | `JWT_REFRESH_TTL` | `168h` | Refresh token TTL (Go duration string) |
 | `ALLOWED_ORIGINS` | `http://localhost:3000` | Comma-separated CORS allow-list |
@@ -228,11 +232,17 @@ All configuration via environment variables or `.env` file (Viper reads both).
 # Multi-stage build — minimal final image (FROM scratch)
 docker build -t go-enterprise-boilerplate .
 
-docker run -p 8080:8080 -p 50051:50051 --env-file .env go-enterprise-boilerplate
+docker run -p 8080:8080 -p 50051:50051 --env-file .env \
+  -v "$(pwd)/jwt_private.pem:/app/jwt_private.pem:ro" \
+  -v "$(pwd)/jwt_public.pem:/app/jwt_public.pem:ro" \
+  go-enterprise-boilerplate
 ```
 
 ```bash
 # Full stack: app + postgres + redis + jaeger
+# Requires jwt_private.pem/jwt_public.pem in the repo root — see Configuration above
+openssl genpkey -algorithm ed25519 -out jwt_private.pem
+openssl pkey -in jwt_private.pem -pubout -out jwt_public.pem
 docker compose up
 ```
 

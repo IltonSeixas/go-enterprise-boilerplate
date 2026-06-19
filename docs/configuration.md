@@ -37,9 +37,17 @@ cp .env.example .env
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `JWT_SECRET` | Yes | — | HS256 signing key — minimum 32 characters, use a random value |
+| `JWT_PRIVATE_KEY_PATH` | Yes | — | Path to the Ed25519 PEM private key used to sign access tokens |
+| `JWT_PUBLIC_KEY_PATH` | Yes | — | Path to the Ed25519 PEM public key used to verify access tokens |
 | `JWT_ACCESS_TTL` | No | `15m` | Access token TTL (Go duration: `15m`, `1h`) |
 | `JWT_REFRESH_TTL` | No | `168h` | Refresh token TTL (Go duration) |
+
+Generate a key pair with:
+
+```bash
+openssl genpkey -algorithm ed25519 -out jwt_private.pem
+openssl pkey -in jwt_private.pem -pubout -out jwt_public.pem
+```
 
 ### Security
 
@@ -59,7 +67,7 @@ cp .env.example .env
 
 Before deploying to production:
 
-- [ ] `JWT_SECRET` is a random value of at least 32 characters — never reuse development values
+- [ ] `JWT_PRIVATE_KEY_PATH`/`JWT_PUBLIC_KEY_PATH` point to a key pair generated specifically for this environment — never reuse development keys
 - [ ] `DATABASE_URL` includes TLS parameters (`sslmode=require`) when `ADAPTER=postgres`
 - [ ] `REDIS_URL` uses a password-protected Redis instance
 - [ ] `ALLOWED_ORIGINS` lists only your actual frontend domains
