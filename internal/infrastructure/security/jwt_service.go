@@ -2,6 +2,7 @@ package security
 
 import (
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"time"
 
@@ -20,19 +21,33 @@ type jwtClaims struct {
 }
 
 type JWTService struct {
-	secret     []byte
+	privateKey ed25519.PrivateKey
+	publicKey  ed25519.PublicKey
 	accessTTL  time.Duration
 	refreshTTL time.Duration
 	redis      *redis.Client
 }
 
-func NewJWTService(secret string, accessTTL, refreshTTL time.Duration, redis *redis.Client) *JWTService {
+// privateKeyPEM and publicKeyPEM must be PKCS#8 PEM-encoded Ed25519 keys,
+// e.g. generated via `openssl genpkey -algorithm ed25519`.
+func NewJWTService(privateKeyPEM, publicKeyPEM []byte, accessTTL, refreshTTL time.Duration, redis *redis.Client) (*JWTService, error) {
+	privateKey, err := jwt.ParseEdPrivateKeyFromPEM(privateKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("parse JWT private key: %w", err)
+	}
+
+	publicKey, err := jwt.ParseEdPublicKeyFromPEM(publicKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("parse JWT public key: %w", err)
+	}
+
 	return &JWTService{
-		secret:     []byte(secret),
+		privateKey: privateKey.(ed25519.PrivateKey),
+		publicKey:  publicKey.(ed25519.PublicKey),
 		accessTTL:  accessTTL,
 		refreshTTL: refreshTTL,
 		redis:      redis,
-	}
+	}, nil
 }
 
 func (s *JWTService) GeneratePair(userID uuid.UUID, role entity.Role) (port.TokenPair, error) {
@@ -46,7 +61,7 @@ func (s *JWTService) GeneratePair(userID uuid.UUID, role entity.Role) (port.Toke
 		Role: role,
 	}
 
-	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.secret)
+	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims).SignedString(s.privateKey)
 	if err != nil {
 		return port.TokenPair{}, apperror.ErrInternal
 	}
@@ -67,10 +82,10 @@ func (s *JWTService) GeneratePair(userID uuid.UUID, role entity.Role) (port.Toke
 
 func (s *JWTService) ValidateAccessToken(token string) (port.AccessTokenClaims, error) {
 	parsed, err := jwt.ParseWithClaims(token, &jwtClaims{}, func(t *jwt.Token) (any, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		if _, ok := t.Method.(*jwt.SigningMethodEd25519); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
-		return s.secret, nil
+		return s.publicKey, nil
 	})
 	if err != nil || !parsed.Valid {
 		return port.AccessTokenClaims{}, apperror.ErrTokenInvalid

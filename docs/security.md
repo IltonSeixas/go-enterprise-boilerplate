@@ -45,13 +45,14 @@ Timing-safe comparison uses `subtle.ConstantTimeCompare` from the Go standard li
 
 ## Authentication
 
-### Access Token (JWT HS256)
+### Access Token (JWT EdDSA)
 
-- Algorithm: HS256 (HMAC-SHA256) via `golang-jwt/jwt`
+- Algorithm: EdDSA (Ed25519) via `golang-jwt/jwt` — asymmetric, the private key (`JWT_PRIVATE_KEY_PATH`) signs and the public key (`JWT_PUBLIC_KEY_PATH`) verifies
 - TTL: 15 minutes (`JWT_ACCESS_TTL`)
 - Claims: `sub` (user ID), `role`, `iat`, `exp`
 - Transport: returned in the JSON response body (`access_token`); the client is responsible for storage and for sending it as `Authorization: Bearer <token>`
 - Validation: signature + expiry checked on every authenticated request via Gin middleware
+- Key separation: only the service that issues tokens needs the private key — other services can verify tokens holding only the public key
 
 ### Refresh Token
 
