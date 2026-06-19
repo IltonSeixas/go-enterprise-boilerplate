@@ -82,13 +82,26 @@ func main() {
 		userRepo = memory.NewUserRepository()
 	}
 
+	jwtPrivateKey, err := os.ReadFile(cfg.JWTPrivateKeyPath)
+	if err != nil {
+		log.Fatal("failed to read JWT_PRIVATE_KEY_PATH", zap.Error(err))
+	}
+	jwtPublicKey, err := os.ReadFile(cfg.JWTPublicKeyPath)
+	if err != nil {
+		log.Fatal("failed to read JWT_PUBLIC_KEY_PATH", zap.Error(err))
+	}
+
 	hasher := security.NewArgon2Hasher()
-	tokenSvc := security.NewJWTService(
-		cfg.JWTSecret,
+	tokenSvc, err := security.NewJWTService(
+		jwtPrivateKey,
+		jwtPublicKey,
 		cfg.JWTAccessTTL,
 		cfg.JWTRefreshTTL,
 		redisClient,
 	)
+	if err != nil {
+		log.Fatal("failed to load Ed25519 JWT keys", zap.Error(err))
+	}
 
 	registerUser := usecase.NewRegisterUser(userRepo, hasher, tokenSvc)
 	loginUser := usecase.NewLoginUser(userRepo, hasher, tokenSvc)
