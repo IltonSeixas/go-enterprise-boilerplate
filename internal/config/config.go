@@ -8,17 +8,18 @@ import (
 )
 
 type Config struct {
-	Host           string        `mapstructure:"HOST"`
-	Port           int           `mapstructure:"PORT"`
-	GRPCPort       int           `mapstructure:"GRPC_PORT"`
-	Adapter        string        `mapstructure:"ADAPTER"`
-	DatabaseURL    string        `mapstructure:"DATABASE_URL"`
-	RedisURL       string        `mapstructure:"REDIS_URL"`
-	JWTSecret      string        `mapstructure:"JWT_SECRET"`
-	JWTAccessTTL   time.Duration `mapstructure:"JWT_ACCESS_TTL"`
-	JWTRefreshTTL  time.Duration `mapstructure:"JWT_REFRESH_TTL"`
-	OTLPEndpoint   string        `mapstructure:"OTLP_ENDPOINT"`
-	AllowedOrigins string        `mapstructure:"ALLOWED_ORIGINS"`
+	Host              string        `mapstructure:"HOST"`
+	Port              int           `mapstructure:"PORT"`
+	GRPCPort          int           `mapstructure:"GRPC_PORT"`
+	Adapter           string        `mapstructure:"ADAPTER"`
+	DatabaseURL       string        `mapstructure:"DATABASE_URL"`
+	RedisURL          string        `mapstructure:"REDIS_URL"`
+	JWTPrivateKeyPath string        `mapstructure:"JWT_PRIVATE_KEY_PATH"`
+	JWTPublicKeyPath  string        `mapstructure:"JWT_PUBLIC_KEY_PATH"`
+	JWTAccessTTL      time.Duration `mapstructure:"JWT_ACCESS_TTL"`
+	JWTRefreshTTL     time.Duration `mapstructure:"JWT_REFRESH_TTL"`
+	OTLPEndpoint      string        `mapstructure:"OTLP_ENDPOINT"`
+	AllowedOrigins    string        `mapstructure:"ALLOWED_ORIGINS"`
 }
 
 func Load() (*Config, error) {
@@ -37,7 +38,7 @@ func Load() (*Config, error) {
 	// viper.AutomaticEnv only binds keys it already knows about, so keys
 	// with no default must be bound explicitly to be read from the
 	// environment.
-	for _, key := range []string{"DATABASE_URL", "JWT_SECRET"} {
+	for _, key := range []string{"DATABASE_URL", "JWT_PRIVATE_KEY_PATH", "JWT_PUBLIC_KEY_PATH"} {
 		if err := viper.BindEnv(key); err != nil {
 			return nil, err
 		}

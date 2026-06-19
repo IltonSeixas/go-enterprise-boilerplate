@@ -12,7 +12,8 @@ func TestLoad_ReadsKeysWithoutDefaults(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
 	t.Setenv("DATABASE_URL", "postgres://test:test@localhost:5432/test")
-	t.Setenv("JWT_SECRET", "test-secret-at-least-32-characters-long")
+	t.Setenv("JWT_PRIVATE_KEY_PATH", "/etc/jwt/jwt_private.pem")
+	t.Setenv("JWT_PUBLIC_KEY_PATH", "/etc/jwt/jwt_public.pem")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -22,8 +23,11 @@ func TestLoad_ReadsKeysWithoutDefaults(t *testing.T) {
 	if cfg.DatabaseURL != "postgres://test:test@localhost:5432/test" {
 		t.Errorf("DatabaseURL = %q, want value from DATABASE_URL env var", cfg.DatabaseURL)
 	}
-	if cfg.JWTSecret != "test-secret-at-least-32-characters-long" {
-		t.Errorf("JWTSecret = %q, want value from JWT_SECRET env var", cfg.JWTSecret)
+	if cfg.JWTPrivateKeyPath != "/etc/jwt/jwt_private.pem" {
+		t.Errorf("JWTPrivateKeyPath = %q, want value from JWT_PRIVATE_KEY_PATH env var", cfg.JWTPrivateKeyPath)
+	}
+	if cfg.JWTPublicKeyPath != "/etc/jwt/jwt_public.pem" {
+		t.Errorf("JWTPublicKeyPath = %q, want value from JWT_PUBLIC_KEY_PATH env var", cfg.JWTPublicKeyPath)
 	}
 }
 
