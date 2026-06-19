@@ -80,7 +80,7 @@ infrastructure/ → application/ → domain/
 
 ### Prerequisites
 
-- Go 1.25+
+- Go 1.25+ (Docker builds use 1.26.4)
 - Optional for production: PostgreSQL 15+, Redis 7+
 
 ### Run immediately (in-memory, zero config)

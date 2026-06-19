@@ -51,7 +51,9 @@ internal/
 │
 ├── interface/
 │   ├── grpc/*_test.go
-│   └── http/middleware/*_test.go      # auth, rate limit, CORS, security headers
+│   └── http/
+│       ├── router_test.go             # route wiring, auth gate, security headers
+│       └── middleware/*_test.go       # auth, rate limit, CORS, security headers
 │
 └── testutil/                          # hand-written stubs implementing port interfaces
     ├── stub_user_repo.go
