@@ -20,5 +20,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - Docker multi-stage image (`scratch` base) and docker-compose stack
 - GitHub Actions CI (vet, staticcheck, unit and integration tests, govulncheck), Docker, and Release workflows
 - Architecture documentation, ADRs, security policy
+- Test coverage for the HTTP router and per-IP rate limiting middleware
+
+### Fixed
+- gRPC `ChangeRole` RPC not enforcing authentication
 
 [Unreleased]: https://github.com/IltonSeixas/go-enterprise-boilerplate/compare/HEAD
