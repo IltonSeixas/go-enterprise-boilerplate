@@ -1,6 +1,8 @@
 package port
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/entity"
@@ -17,9 +19,9 @@ type AccessTokenClaims struct {
 }
 
 type TokenService interface {
-	GeneratePair(userID uuid.UUID, role entity.Role) (TokenPair, error)
+	GeneratePair(ctx context.Context, userID uuid.UUID, role entity.Role) (TokenPair, error)
 	ValidateAccessToken(token string) (AccessTokenClaims, error)
-	FindUserIDByRefreshToken(token string) (uuid.UUID, bool, error)
-	RotateRefreshToken(oldToken string, userID uuid.UUID, role entity.Role) (TokenPair, error)
-	RevokeRefreshToken(token string) error
+	FindUserIDByRefreshToken(ctx context.Context, token string) (uuid.UUID, bool, error)
+	RotateRefreshToken(ctx context.Context, oldToken string, userID uuid.UUID, role entity.Role) (TokenPair, error)
+	RevokeRefreshToken(ctx context.Context, token string) error
 }

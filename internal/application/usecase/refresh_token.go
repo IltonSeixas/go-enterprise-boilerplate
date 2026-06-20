@@ -19,7 +19,7 @@ func NewRefreshToken(users repository.UserRepository, tokens port.TokenService) 
 }
 
 func (uc *RefreshToken) Execute(ctx context.Context, in dto.RefreshInput) (dto.AuthOutput, error) {
-	userID, found, err := uc.tokens.FindUserIDByRefreshToken(in.RefreshToken)
+	userID, found, err := uc.tokens.FindUserIDByRefreshToken(ctx, in.RefreshToken)
 	if err != nil || !found {
 		return dto.AuthOutput{}, apperror.ErrInvalidCredentials
 	}
@@ -32,11 +32,11 @@ func (uc *RefreshToken) Execute(ctx context.Context, in dto.RefreshInput) (dto.A
 	if !user.IsActive() {
 		// Best-effort revoke: the account is already being denied via ErrAccountInactive below,
 		// so a revoke failure here must not change the response or leak storage details to the caller.
-		_ = uc.tokens.RevokeRefreshToken(in.RefreshToken)
+		_ = uc.tokens.RevokeRefreshToken(ctx, in.RefreshToken)
 		return dto.AuthOutput{}, apperror.ErrAccountInactive
 	}
 
-	pair, err := uc.tokens.RotateRefreshToken(in.RefreshToken, userID, user.Role())
+	pair, err := uc.tokens.RotateRefreshToken(ctx, in.RefreshToken, userID, user.Role())
 	if err != nil {
 		return dto.AuthOutput{}, apperror.ErrInvalidCredentials
 	}
