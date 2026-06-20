@@ -1,6 +1,7 @@
 package security_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -54,7 +55,7 @@ func TestJWTService_GeneratePairThenValidate_SucceedsWithEdDSA(t *testing.T) {
 	svc := newTestJWTService(t, testPublicKeyPEM)
 	userID := uuid.New()
 
-	pair, err := svc.GeneratePair(userID, entity.RoleUser)
+	pair, err := svc.GeneratePair(context.Background(), userID, entity.RoleUser)
 	require.NoError(t, err)
 
 	claims, err := svc.ValidateAccessToken(pair.AccessToken)
@@ -67,7 +68,7 @@ func TestJWTService_ValidateAccessToken_RejectsTokenSignedWithDifferentKeyPair(t
 	signingSvc := newTestJWTService(t, testPublicKeyPEM)
 	verifyingSvc := newTestJWTService(t, otherPublicKeyPEM)
 
-	pair, err := signingSvc.GeneratePair(uuid.New(), entity.RoleUser)
+	pair, err := signingSvc.GeneratePair(context.Background(), uuid.New(), entity.RoleUser)
 	require.NoError(t, err)
 
 	_, err = verifyingSvc.ValidateAccessToken(pair.AccessToken)

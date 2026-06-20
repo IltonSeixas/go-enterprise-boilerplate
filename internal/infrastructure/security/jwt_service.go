@@ -50,7 +50,7 @@ func NewJWTService(privateKeyPEM, publicKeyPEM []byte, accessTTL, refreshTTL tim
 	}, nil
 }
 
-func (s *JWTService) GeneratePair(userID uuid.UUID, role entity.Role) (port.TokenPair, error) {
+func (s *JWTService) GeneratePair(ctx context.Context, userID uuid.UUID, role entity.Role) (port.TokenPair, error) {
 	now := time.Now()
 	claims := jwtClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -69,7 +69,7 @@ func (s *JWTService) GeneratePair(userID uuid.UUID, role entity.Role) (port.Toke
 	refreshToken := uuid.New().String()
 
 	if err = s.redis.Set(
-		context.Background(),
+		ctx,
 		refreshKey(refreshToken),
 		userID.String(),
 		s.refreshTTL,
@@ -104,8 +104,8 @@ func (s *JWTService) ValidateAccessToken(token string) (port.AccessTokenClaims, 
 	return port.AccessTokenClaims{UserID: userID, Role: claims.Role}, nil
 }
 
-func (s *JWTService) FindUserIDByRefreshToken(token string) (uuid.UUID, bool, error) {
-	stored, err := s.redis.Get(context.Background(), refreshKey(token)).Result()
+func (s *JWTService) FindUserIDByRefreshToken(ctx context.Context, token string) (uuid.UUID, bool, error) {
+	stored, err := s.redis.Get(ctx, refreshKey(token)).Result()
 	if err == redis.Nil {
 		return uuid.UUID{}, false, nil
 	}
@@ -121,8 +121,7 @@ func (s *JWTService) FindUserIDByRefreshToken(token string) (uuid.UUID, bool, er
 	return userID, true, nil
 }
 
-func (s *JWTService) RotateRefreshToken(oldToken string, userID uuid.UUID, role entity.Role) (port.TokenPair, error) {
-	ctx := context.Background()
+func (s *JWTService) RotateRefreshToken(ctx context.Context, oldToken string, userID uuid.UUID, role entity.Role) (port.TokenPair, error) {
 	stored, err := s.redis.Get(ctx, refreshKey(oldToken)).Result()
 	if err != nil || stored != userID.String() {
 		return port.TokenPair{}, apperror.ErrTokenInvalid
@@ -132,11 +131,11 @@ func (s *JWTService) RotateRefreshToken(oldToken string, userID uuid.UUID, role 
 		return port.TokenPair{}, apperror.ErrInternal
 	}
 
-	return s.GeneratePair(userID, role)
+	return s.GeneratePair(ctx, userID, role)
 }
 
-func (s *JWTService) RevokeRefreshToken(token string) error {
-	return s.redis.Del(context.Background(), refreshKey(token)).Err()
+func (s *JWTService) RevokeRefreshToken(ctx context.Context, token string) error {
+	return s.redis.Del(ctx, refreshKey(token)).Err()
 }
 
 var _ port.TokenService = (*JWTService)(nil)
