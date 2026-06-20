@@ -8,6 +8,7 @@ import (
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/dto"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/port"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/apperror"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/entity"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/repository"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/valueobject"
 )
@@ -15,10 +16,11 @@ import (
 type ChangePassword struct {
 	users  repository.UserRepository
 	hasher port.PasswordHasher
+	audit  port.AuditPort
 }
 
-func NewChangePassword(users repository.UserRepository, hasher port.PasswordHasher) *ChangePassword {
-	return &ChangePassword{users: users, hasher: hasher}
+func NewChangePassword(users repository.UserRepository, hasher port.PasswordHasher, audit port.AuditPort) *ChangePassword {
+	return &ChangePassword{users: users, hasher: hasher, audit: audit}
 }
 
 func (uc *ChangePassword) Execute(ctx context.Context, id uuid.UUID, in dto.ChangePasswordInput) error {
@@ -42,5 +44,16 @@ func (uc *ChangePassword) Execute(ctx context.Context, id uuid.UUID, in dto.Chan
 	}
 
 	user.UpdatePassword(newHash)
-	return uc.users.Save(ctx, user)
+	if err := uc.users.Save(ctx, user); err != nil {
+		return err
+	}
+
+	uc.audit.Record(ctx, entity.NewAuditEvent(
+		entity.AuditEventPasswordChanged,
+		uuid.NullUUID{UUID: id, Valid: true},
+		uuid.NullUUID{UUID: id, Valid: true},
+		"password changed",
+	))
+
+	return nil
 }

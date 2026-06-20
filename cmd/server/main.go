@@ -16,9 +16,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/port"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/usecase"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/config"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/repository"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/audit"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/persistence/memory"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/persistence/postgres"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/security"
@@ -64,6 +66,7 @@ func main() {
 
 	var userRepo repository.UserRepository
 	var dbPinger handler.Pinger
+	var auditLog port.AuditPort
 	switch cfg.Adapter {
 	case "postgres":
 		pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
@@ -79,9 +82,11 @@ func main() {
 		log.Info("using postgres adapter")
 		userRepo = postgres.NewUserRepository(pool)
 		dbPinger = pool
+		auditLog = audit.NewPostgresAuditLog(pool, log)
 	default:
 		log.Info("using in-memory adapter")
 		userRepo = memory.NewUserRepository()
+		auditLog = audit.NewMemoryAuditLog(log)
 	}
 
 	jwtPrivateKey, err := os.ReadFile(cfg.JWTPrivateKeyPath)
@@ -107,14 +112,14 @@ func main() {
 		log.Fatal("failed to load Ed25519 JWT keys", zap.Error(err))
 	}
 
-	registerUser := usecase.NewRegisterUser(userRepo, hasher, tokenSvc)
-	loginUser := usecase.NewLoginUser(userRepo, hasher, tokenSvc)
-	refreshToken := usecase.NewRefreshToken(userRepo, tokenSvc)
+	registerUser := usecase.NewRegisterUser(userRepo, hasher, tokenSvc, auditLog)
+	loginUser := usecase.NewLoginUser(userRepo, hasher, tokenSvc, auditLog)
+	refreshToken := usecase.NewRefreshToken(userRepo, tokenSvc, auditLog)
 	getUser := usecase.NewGetUser(userRepo)
 	listUsers := usecase.NewListUsers(userRepo)
 	updateProfile := usecase.NewUpdateProfile(userRepo)
-	changePassword := usecase.NewChangePassword(userRepo, hasher)
-	changeRole := usecase.NewChangeUserRole(userRepo)
+	changePassword := usecase.NewChangePassword(userRepo, hasher, auditLog)
+	changeRole := usecase.NewChangeUserRole(userRepo, auditLog)
 
 	authHandler := handler.NewAuthHandler(registerUser, loginUser, refreshToken)
 	userHandler := handler.NewUserHandler(getUser, listUsers, updateProfile, changePassword, changeRole)

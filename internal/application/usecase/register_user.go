@@ -3,6 +3,8 @@ package usecase
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/dto"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/port"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/apperror"
@@ -15,14 +17,16 @@ type RegisterUser struct {
 	users  repository.UserRepository
 	hasher port.PasswordHasher
 	tokens port.TokenService
+	audit  port.AuditPort
 }
 
 func NewRegisterUser(
 	users repository.UserRepository,
 	hasher port.PasswordHasher,
 	tokens port.TokenService,
+	audit port.AuditPort,
 ) *RegisterUser {
-	return &RegisterUser{users: users, hasher: hasher, tokens: tokens}
+	return &RegisterUser{users: users, hasher: hasher, tokens: tokens, audit: audit}
 }
 
 func (uc *RegisterUser) Execute(ctx context.Context, in dto.RegisterInput) (dto.AuthOutput, error) {
@@ -74,6 +78,13 @@ func (uc *RegisterUser) Execute(ctx context.Context, in dto.RegisterInput) (dto.
 	if err != nil {
 		return dto.AuthOutput{}, err
 	}
+
+	uc.audit.Record(ctx, entity.NewAuditEvent(
+		entity.AuditEventUserRegistered,
+		uuid.NullUUID{UUID: user.ID().UUID(), Valid: true},
+		uuid.NullUUID{},
+		"user registered with role "+string(user.Role()),
+	))
 
 	return dto.AuthOutput{
 		AccessToken:  pair.AccessToken,

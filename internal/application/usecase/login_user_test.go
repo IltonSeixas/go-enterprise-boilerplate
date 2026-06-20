@@ -38,7 +38,7 @@ func TestLoginUser_Success(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	repo.SetFindByEmailResult(user, nil)
 
-	uc := usecase.NewLoginUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService())
+	uc := usecase.NewLoginUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService(), testutil.NewStubAuditPort())
 	out, err := uc.Execute(context.Background(), dto.LoginInput{
 		Email: "user@example.com", Password: "validpassword123",
 	})
@@ -52,7 +52,7 @@ func TestLoginUser_EmailNotFound(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	repo.SetFindByEmailResult(nil, apperror.ErrUserNotFound)
 
-	uc := usecase.NewLoginUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService())
+	uc := usecase.NewLoginUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService(), testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), dto.LoginInput{
 		Email: "ghost@example.com", Password: "validpassword123",
 	})
@@ -66,7 +66,7 @@ func TestLoginUser_WrongPassword(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	repo.SetFindByEmailResult(user, nil)
 
-	uc := usecase.NewLoginUser(repo, testutil.NewStubHasherRejectAll(), testutil.NewStubTokenService())
+	uc := usecase.NewLoginUser(repo, testutil.NewStubHasherRejectAll(), testutil.NewStubTokenService(), testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), dto.LoginInput{
 		Email: "user@example.com", Password: "wrongpassword",
 	})
@@ -80,7 +80,7 @@ func TestLoginUser_InactiveAccount(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	repo.SetFindByEmailResult(user, nil)
 
-	uc := usecase.NewLoginUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService())
+	uc := usecase.NewLoginUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService(), testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), dto.LoginInput{
 		Email: "inactive@example.com", Password: "validpassword123",
 	})

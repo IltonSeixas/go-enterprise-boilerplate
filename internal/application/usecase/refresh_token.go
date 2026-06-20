@@ -3,19 +3,23 @@ package usecase
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/dto"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/port"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/apperror"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/entity"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/repository"
 )
 
 type RefreshToken struct {
 	users  repository.UserRepository
 	tokens port.TokenService
+	audit  port.AuditPort
 }
 
-func NewRefreshToken(users repository.UserRepository, tokens port.TokenService) *RefreshToken {
-	return &RefreshToken{users: users, tokens: tokens}
+func NewRefreshToken(users repository.UserRepository, tokens port.TokenService, audit port.AuditPort) *RefreshToken {
+	return &RefreshToken{users: users, tokens: tokens, audit: audit}
 }
 
 func (uc *RefreshToken) Execute(ctx context.Context, in dto.RefreshInput) (dto.AuthOutput, error) {
@@ -40,6 +44,13 @@ func (uc *RefreshToken) Execute(ctx context.Context, in dto.RefreshInput) (dto.A
 	if err != nil {
 		return dto.AuthOutput{}, apperror.ErrInvalidCredentials
 	}
+
+	uc.audit.Record(ctx, entity.NewAuditEvent(
+		entity.AuditEventTokenRefreshed,
+		uuid.NullUUID{UUID: userID, Valid: true},
+		uuid.NullUUID{},
+		"refresh token rotated",
+	))
 
 	return dto.AuthOutput{
 		AccessToken:  pair.AccessToken,
