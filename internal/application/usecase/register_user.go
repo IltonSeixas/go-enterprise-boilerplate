@@ -70,7 +70,7 @@ func (uc *RegisterUser) Execute(ctx context.Context, in dto.RegisterInput) (dto.
 		}
 	}
 
-	pair, err := uc.tokens.GeneratePair(user.ID().UUID(), user.Role())
+	pair, err := uc.tokens.GeneratePair(ctx, user.ID().UUID(), user.Role())
 	if err != nil {
 		return dto.AuthOutput{}, err
 	}
