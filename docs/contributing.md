@@ -44,6 +44,7 @@ All of the above run automatically in CI on every pull request. A PR will not be
 - Every new use case must have a corresponding `_test.go` file
 - Every new value object must validate its invariants in the constructor and have tests for both valid and invalid inputs
 - No generic `BaseService`, `Manager`, or catch-all `Service` struct. Each use case is its own struct with a single exported method and an explicit, narrow set of dependencies — never a god struct that accumulates every repository and port in the application
+- Never call `context.Background()` outside the initial composition root (`cmd/server/main.go`) or a test's top-level setup. Every function that performs I/O (database, Redis, outbound HTTP/gRPC) must accept `ctx context.Context` as its first parameter and propagate the caller's context down the call chain — never fabricate a new one partway through a request
 
 ### Style
 

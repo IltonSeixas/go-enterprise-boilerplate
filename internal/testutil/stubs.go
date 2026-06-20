@@ -128,7 +128,7 @@ func NewStubTokenServiceRejectAll() *StubTokenServiceRejectAll {
 	return &StubTokenServiceRejectAll{}
 }
 
-func (s *StubTokenServiceRejectAll) GeneratePair(_ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
+func (s *StubTokenServiceRejectAll) GeneratePair(_ context.Context, _ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
 	return port.TokenPair{}, apperror.ErrTokenInvalid
 }
 
@@ -136,15 +136,15 @@ func (s *StubTokenServiceRejectAll) ValidateAccessToken(_ string) (port.AccessTo
 	return port.AccessTokenClaims{}, apperror.ErrTokenInvalid
 }
 
-func (s *StubTokenServiceRejectAll) FindUserIDByRefreshToken(_ string) (uuid.UUID, bool, error) {
+func (s *StubTokenServiceRejectAll) FindUserIDByRefreshToken(_ context.Context, _ string) (uuid.UUID, bool, error) {
 	return uuid.UUID{}, false, nil
 }
 
-func (s *StubTokenServiceRejectAll) RotateRefreshToken(_ string, _ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
+func (s *StubTokenServiceRejectAll) RotateRefreshToken(_ context.Context, _ string, _ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
 	return port.TokenPair{}, apperror.ErrTokenInvalid
 }
 
-func (s *StubTokenServiceRejectAll) RevokeRefreshToken(_ string) error { return nil }
+func (s *StubTokenServiceRejectAll) RevokeRefreshToken(_ context.Context, _ string) error { return nil }
 
 var _ port.TokenService = (*StubTokenServiceRejectAll)(nil)
 
@@ -159,7 +159,7 @@ func NewStubTokenServiceWithClaims(token string, claims port.AccessTokenClaims) 
 	return &StubTokenServiceWithClaims{ValidToken: token, ValidRefreshToken: "refresh-stub", Claims: claims}
 }
 
-func (s *StubTokenServiceWithClaims) GeneratePair(id uuid.UUID, role entity.Role) (port.TokenPair, error) {
+func (s *StubTokenServiceWithClaims) GeneratePair(_ context.Context, id uuid.UUID, role entity.Role) (port.TokenPair, error) {
 	return port.TokenPair{AccessToken: s.ValidToken, RefreshToken: "refresh-stub"}, nil
 }
 
@@ -170,18 +170,20 @@ func (s *StubTokenServiceWithClaims) ValidateAccessToken(token string) (port.Acc
 	return s.Claims, nil
 }
 
-func (s *StubTokenServiceWithClaims) FindUserIDByRefreshToken(token string) (uuid.UUID, bool, error) {
+func (s *StubTokenServiceWithClaims) FindUserIDByRefreshToken(_ context.Context, token string) (uuid.UUID, bool, error) {
 	if token != s.ValidRefreshToken {
 		return uuid.UUID{}, false, nil
 	}
 	return s.Claims.UserID, true, nil
 }
 
-func (s *StubTokenServiceWithClaims) RotateRefreshToken(_ string, id uuid.UUID, role entity.Role) (port.TokenPair, error) {
+func (s *StubTokenServiceWithClaims) RotateRefreshToken(_ context.Context, _ string, id uuid.UUID, role entity.Role) (port.TokenPair, error) {
 	return port.TokenPair{AccessToken: s.ValidToken, RefreshToken: "refresh-new"}, nil
 }
 
-func (s *StubTokenServiceWithClaims) RevokeRefreshToken(_ string) error { return nil }
+func (s *StubTokenServiceWithClaims) RevokeRefreshToken(_ context.Context, _ string) error {
+	return nil
+}
 
 var _ port.TokenService = (*StubTokenServiceWithClaims)(nil)
 
@@ -190,7 +192,7 @@ type StubTokenService struct{}
 
 func NewStubTokenService() *StubTokenService { return &StubTokenService{} }
 
-func (s *StubTokenService) GeneratePair(_ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
+func (s *StubTokenService) GeneratePair(_ context.Context, _ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
 	return port.TokenPair{AccessToken: "access-stub", RefreshToken: "refresh-stub"}, nil
 }
 
@@ -198,14 +200,14 @@ func (s *StubTokenService) ValidateAccessToken(_ string) (port.AccessTokenClaims
 	return port.AccessTokenClaims{UserID: uuid.New(), Role: entity.RoleUser}, nil
 }
 
-func (s *StubTokenService) FindUserIDByRefreshToken(_ string) (uuid.UUID, bool, error) {
+func (s *StubTokenService) FindUserIDByRefreshToken(_ context.Context, _ string) (uuid.UUID, bool, error) {
 	return uuid.New(), true, nil
 }
 
-func (s *StubTokenService) RotateRefreshToken(_ string, id uuid.UUID, role entity.Role) (port.TokenPair, error) {
+func (s *StubTokenService) RotateRefreshToken(_ context.Context, _ string, id uuid.UUID, role entity.Role) (port.TokenPair, error) {
 	return port.TokenPair{AccessToken: "access-new", RefreshToken: "refresh-new"}, nil
 }
 
-func (s *StubTokenService) RevokeRefreshToken(_ string) error { return nil }
+func (s *StubTokenService) RevokeRefreshToken(_ context.Context, _ string) error { return nil }
 
 var _ port.TokenService = (*StubTokenService)(nil)

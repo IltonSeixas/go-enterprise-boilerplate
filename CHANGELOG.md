@@ -28,5 +28,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 
 ### Fixed
 - gRPC `ChangeRole` RPC not enforcing authentication
+- `JWTService` no longer fabricates `context.Background()` internally for its Redis calls; `TokenService` now requires callers to pass the request-scoped `context.Context` through `GeneratePair`, `FindUserIDByRefreshToken`, `RotateRefreshToken`, and `RevokeRefreshToken`
 
 [Unreleased]: https://github.com/IltonSeixas/go-enterprise-boilerplate/compare/HEAD
