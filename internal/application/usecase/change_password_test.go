@@ -20,7 +20,7 @@ func TestChangePassword_Success(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	require.NoError(t, repo.Save(context.Background(), user))
 
-	uc := usecase.NewChangePassword(repo, testutil.NewStubHasher())
+	uc := usecase.NewChangePassword(repo, testutil.NewStubHasher(), testutil.NewStubAuditPort())
 	err := uc.Execute(context.Background(), user.ID().UUID(), dto.ChangePasswordInput{
 		CurrentPassword: "oldpassword123",
 		NewPassword:     "newpassword123456",
@@ -35,7 +35,7 @@ func TestChangePassword_WrongCurrentPassword(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	require.NoError(t, repo.Save(context.Background(), user))
 
-	uc := usecase.NewChangePassword(repo, testutil.NewStubHasherRejectAll())
+	uc := usecase.NewChangePassword(repo, testutil.NewStubHasherRejectAll(), testutil.NewStubAuditPort())
 	err := uc.Execute(context.Background(), user.ID().UUID(), dto.ChangePasswordInput{
 		CurrentPassword: "wrongcurrent",
 		NewPassword:     "newpassword123456",
@@ -47,7 +47,7 @@ func TestChangePassword_WrongCurrentPassword(t *testing.T) {
 func TestChangePassword_UserNotFound(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 
-	uc := usecase.NewChangePassword(repo, testutil.NewStubHasher())
+	uc := usecase.NewChangePassword(repo, testutil.NewStubHasher(), testutil.NewStubAuditPort())
 	err := uc.Execute(context.Background(), uuid.New(), dto.ChangePasswordInput{
 		CurrentPassword: "oldpassword123",
 		NewPassword:     "newpassword123456",

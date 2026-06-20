@@ -41,8 +41,8 @@ func newUserHandler(repo *testutil.StubUserRepo) *handler.UserHandler {
 		usecase.NewGetUser(repo),
 		usecase.NewListUsers(repo),
 		usecase.NewUpdateProfile(repo),
-		usecase.NewChangePassword(repo, testutil.NewStubHasher()),
-		usecase.NewChangeUserRole(repo),
+		usecase.NewChangePassword(repo, testutil.NewStubHasher(), testutil.NewStubAuditPort()),
+		usecase.NewChangeUserRole(repo, testutil.NewStubAuditPort()),
 	)
 }
 

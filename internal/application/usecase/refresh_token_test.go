@@ -20,7 +20,7 @@ func TestRefreshToken_RejectsUnknownRefreshToken(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	tokens := testutil.NewStubTokenServiceWithClaims("access-stub", port.AccessTokenClaims{})
 
-	uc := usecase.NewRefreshToken(repo, tokens)
+	uc := usecase.NewRefreshToken(repo, tokens, testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), dto.RefreshInput{RefreshToken: "unknown-token"})
 
 	assert.ErrorIs(t, err, apperror.ErrInvalidCredentials)
@@ -33,7 +33,7 @@ func TestRefreshToken_RejectsWhenUserNoLongerExists(t *testing.T) {
 		Role:   entity.RoleUser,
 	})
 
-	uc := usecase.NewRefreshToken(repo, tokens)
+	uc := usecase.NewRefreshToken(repo, tokens, testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), dto.RefreshInput{RefreshToken: tokens.ValidRefreshToken})
 
 	assert.ErrorIs(t, err, apperror.ErrUserNotFound)
@@ -50,7 +50,7 @@ func TestRefreshToken_RevokesTokenAndRejectsInactiveAccount(t *testing.T) {
 		Role:   user.Role(),
 	})
 
-	uc := usecase.NewRefreshToken(repo, tokens)
+	uc := usecase.NewRefreshToken(repo, tokens, testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), dto.RefreshInput{RefreshToken: tokens.ValidRefreshToken})
 
 	assert.ErrorIs(t, err, apperror.ErrAccountInactive)
@@ -66,7 +66,7 @@ func TestRefreshToken_RotatesTokenPairOnSuccess(t *testing.T) {
 		Role:   user.Role(),
 	})
 
-	uc := usecase.NewRefreshToken(repo, tokens)
+	uc := usecase.NewRefreshToken(repo, tokens, testutil.NewStubAuditPort())
 	out, err := uc.Execute(context.Background(), dto.RefreshInput{RefreshToken: tokens.ValidRefreshToken})
 
 	require.NoError(t, err)
