@@ -21,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - GitHub Actions CI (vet, staticcheck, unit and integration tests, govulncheck), Docker, and Release workflows
 - Architecture documentation, ADRs, security policy
 - Test coverage for the HTTP router and per-IP rate limiting middleware
+- `internal/architecture/layering_test.go` enforcing the Clean Architecture dependency rule from ADR-0001 at test time — see [ADR-0006](docs/adr/0006-architecture-layering-test.md)
 
 ### Changed
 - **Breaking:** JWT access tokens are now signed with EdDSA (Ed25519) instead of HS256. `JWT_SECRET` is replaced by `JWT_PRIVATE_KEY_PATH`/`JWT_PUBLIC_KEY_PATH` — see [ADR-0005](docs/adr/0005-eddsa-jwt-signing.md). Tokens issued under the previous version are not valid under this one.
