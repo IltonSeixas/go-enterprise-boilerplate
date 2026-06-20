@@ -55,10 +55,13 @@ internal/
 │       ├── router_test.go             # route wiring, auth gate, security headers
 │       └── middleware/*_test.go       # auth, rate limit, CORS, security headers
 │
-└── testutil/                          # hand-written stubs implementing port interfaces
-    ├── stub_user_repo.go
-    ├── stub_hasher.go
-    └── stub_token_service.go
+├── testutil/                           # hand-written stubs implementing port interfaces
+│   ├── stub_user_repo.go
+│   ├── stub_hasher.go
+│   └── stub_token_service.go
+│
+└── architecture/
+    └── layering_test.go                # walks the import graph for Clean Architecture violations
 ```
 
 ---
@@ -121,6 +124,15 @@ func TestRegisterUser_FirstUserBecomesOwner(t *testing.T) {
     assert.Equal(t, entity.RoleOwner, out.User.Role)
 }
 ```
+
+---
+
+## Architecture Tests
+
+`internal/architecture/layering_test.go` enforces the dependency rule from [ADR-0001](adr/0001-clean-architecture.md) as a real, automatically-run test rather than a convention checked only in review — see [ADR-0006](adr/0006-architecture-layering-test.md). It loads the real import graph with `golang.org/x/tools/go/packages` and runs as part of the default `go test ./...` step, failing the build if:
+
+- `internal/domain/...` imports `internal/application` or an infrastructure package (`gin-gonic/gin`, `jackc/pgx`, `redis/go-redis`, `golang-jwt/jwt`, `opentelemetry`, `internal/infrastructure`, `internal/interface`, etc.)
+- `internal/application/...` imports any of those same infrastructure packages
 
 ---
 

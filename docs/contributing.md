@@ -40,6 +40,7 @@ All of the above run automatically in CI on every pull request. A PR will not be
 ### Architecture
 
 - Never import infrastructure packages from `internal/domain/` or `internal/application/`
+- This rule is enforced automatically by `internal/architecture/layering_test.go` — see [ADR-0006](adr/0006-architecture-layering-test.md). A PR that violates it fails `go test ./...`
 - Every new use case must have a corresponding `_test.go` file
 - Every new value object must validate its invariants in the constructor and have tests for both valid and invalid inputs
 
