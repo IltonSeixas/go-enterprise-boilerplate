@@ -54,7 +54,7 @@ interface/ → application/ → domain/
 infrastructure/ → application/ → domain/
 ```
 
-`domain/` and `application/` never import from `infrastructure/` or `interface/`.
+`domain/` and `application/` never import from `infrastructure/` or `interface/`. Enforced automatically by `internal/architecture/layering_test.go` (see [ADR-0006](docs/adr/0006-architecture-layering-test.md)) as part of the regular `go test ./...` run.
 
 ---
 
@@ -184,6 +184,7 @@ go test ./internal/domain/... -v       # domain tests only
 ### Structure
 
 - **Unit tests**: `_test.go` files co-located with source. Domain entities, value objects and use cases are tested in complete isolation using hand-written stubs from `internal/testutil` that satisfy the repository and service port interfaces — no Spring-style mocking framework, no real infrastructure.
+- **Architecture tests**: `internal/architecture/layering_test.go` enforces the Clean Architecture dependency rule from [ADR-0001](docs/adr/0001-clean-architecture.md) at test time — see [ADR-0006](docs/adr/0006-architecture-layering-test.md). Runs as part of the regular `go test ./...` step.
 
 ### TDD Approach
 
