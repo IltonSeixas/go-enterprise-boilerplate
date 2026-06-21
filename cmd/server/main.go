@@ -63,6 +63,7 @@ func main() {
 	defer redisClient.Close()
 
 	var userRepo repository.UserRepository
+	var dbPinger handler.Pinger
 	switch cfg.Adapter {
 	case "postgres":
 		pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
@@ -77,6 +78,7 @@ func main() {
 
 		log.Info("using postgres adapter")
 		userRepo = postgres.NewUserRepository(pool)
+		dbPinger = pool
 	default:
 		log.Info("using in-memory adapter")
 		userRepo = memory.NewUserRepository()
@@ -116,8 +118,9 @@ func main() {
 
 	authHandler := handler.NewAuthHandler(registerUser, loginUser, refreshToken)
 	userHandler := handler.NewUserHandler(getUser, listUsers, updateProfile, changePassword, changeRole)
+	healthHandler := handler.NewHealthHandler(handler.RedisPinger{Client: redisClient}, dbPinger)
 
-	router := httpinterface.NewRouter(authHandler, userHandler, tokenSvc, userRepo, cfg.AllowedOriginList())
+	router := httpinterface.NewRouter(authHandler, userHandler, healthHandler, tokenSvc, userRepo, cfg.AllowedOriginList())
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),

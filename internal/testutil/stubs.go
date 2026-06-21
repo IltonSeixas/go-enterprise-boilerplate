@@ -242,3 +242,12 @@ func (s *StubTokenService) RotateRefreshToken(_ context.Context, _ string, id uu
 func (s *StubTokenService) RevokeRefreshToken(_ context.Context, _ string) error { return nil }
 
 var _ port.TokenService = (*StubTokenService)(nil)
+
+// StubPinger returns a fixed error without I/O.
+type StubPinger struct {
+	Err error
+}
+
+func NewStubPinger(err error) *StubPinger { return &StubPinger{Err: err} }
+
+func (p *StubPinger) Ping(_ context.Context) error { return p.Err }
