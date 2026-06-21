@@ -107,12 +107,13 @@ func main() {
 	loginUser := usecase.NewLoginUser(userRepo, hasher, tokenSvc)
 	refreshToken := usecase.NewRefreshToken(userRepo, tokenSvc)
 	getUser := usecase.NewGetUser(userRepo)
+	listUsers := usecase.NewListUsers(userRepo)
 	updateProfile := usecase.NewUpdateProfile(userRepo)
 	changePassword := usecase.NewChangePassword(userRepo, hasher)
 	changeRole := usecase.NewChangeUserRole(userRepo)
 
 	authHandler := handler.NewAuthHandler(registerUser, loginUser, refreshToken)
-	userHandler := handler.NewUserHandler(getUser, updateProfile, changePassword, changeRole)
+	userHandler := handler.NewUserHandler(getUser, listUsers, updateProfile, changePassword, changeRole)
 
 	router := httpinterface.NewRouter(authHandler, userHandler, tokenSvc, userRepo, cfg.AllowedOriginList())
 
@@ -134,7 +135,7 @@ func main() {
 		grpc.UnaryInterceptor(grpcinterface.UnaryAuthInterceptor(tokenSvc, userRepo)),
 	)
 	pb.RegisterAuthServiceServer(grpcServer, grpcinterface.NewAuthServer(registerUser, loginUser, refreshToken))
-	pb.RegisterUserServiceServer(grpcServer, grpcinterface.NewUserServer(getUser, updateProfile, changePassword, changeRole))
+	pb.RegisterUserServiceServer(grpcServer, grpcinterface.NewUserServer(getUser, listUsers, updateProfile, changePassword, changeRole))
 	reflection.Register(grpcServer)
 
 	quit := make(chan os.Signal, 1)
