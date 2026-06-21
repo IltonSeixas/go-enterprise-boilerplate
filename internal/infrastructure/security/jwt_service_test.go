@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/entity"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/resilience"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/security"
 )
 
@@ -46,6 +47,8 @@ func newTestJWTService(t *testing.T, publicKeyPEM string) *security.JWTService {
 		15*time.Minute,
 		7*24*time.Hour,
 		client,
+		resilience.NewCircuitBreaker(5, 30*time.Second),
+		resilience.NewRetryPolicy(3, 50*time.Millisecond, 2),
 	)
 	require.NoError(t, err)
 	return svc
