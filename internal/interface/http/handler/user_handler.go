@@ -79,12 +79,29 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
-	page, _ := strconv.Atoi(c.Query("page"))
-	pageSize, _ := strconv.Atoi(c.Query("page_size"))
+	var page int32
+	if p := c.Query("page"); p != "" {
+		parsedPage, err := strconv.ParseInt(p, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page"})
+			return
+		}
+		page = int32(parsedPage)
+	}
+
+	var pageSize int32
+	if ps := c.Query("page_size"); ps != "" {
+		parsedPageSize, err := strconv.ParseInt(ps, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page_size"})
+			return
+		}
+		pageSize = int32(parsedPageSize)
+	}
 
 	out, err := h.listUsers.Execute(c.Request.Context(), claims.Role, dto.ListUsersInput{
-		Page:     int32(page),
-		PageSize: int32(pageSize),
+		Page:     page,
+		PageSize: pageSize,
 	})
 	if err != nil {
 		c.JSON(domainStatus(err), gin.H{"error": err.Error()})
