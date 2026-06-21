@@ -341,6 +341,178 @@ func (*GetMeRequest) Descriptor() ([]byte, []int) {
 	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{5}
 }
 
+type ListUsersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUsersRequest) Reset() {
+	*x = ListUsersRequest{}
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUsersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUsersRequest) ProtoMessage() {}
+
+func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
+func (*ListUsersRequest) Descriptor() ([]byte, []int) {
+	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListUsersRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListUsersRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+type PaginationMetadata struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	TotalItems    int64                  `protobuf:"varint,3,opt,name=total_items,json=totalItems,proto3" json:"total_items,omitempty"`
+	TotalPages    int32                  `protobuf:"varint,4,opt,name=total_pages,json=totalPages,proto3" json:"total_pages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PaginationMetadata) Reset() {
+	*x = PaginationMetadata{}
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PaginationMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PaginationMetadata) ProtoMessage() {}
+
+func (x *PaginationMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PaginationMetadata.ProtoReflect.Descriptor instead.
+func (*PaginationMetadata) Descriptor() ([]byte, []int) {
+	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *PaginationMetadata) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *PaginationMetadata) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *PaginationMetadata) GetTotalItems() int64 {
+	if x != nil {
+		return x.TotalItems
+	}
+	return 0
+}
+
+func (x *PaginationMetadata) GetTotalPages() int32 {
+	if x != nil {
+		return x.TotalPages
+	}
+	return 0
+}
+
+type ListUsersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*UserResponse        `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Pagination    *PaginationMetadata    `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUsersResponse) Reset() {
+	*x = ListUsersResponse{}
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUsersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUsersResponse) ProtoMessage() {}
+
+func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
+func (*ListUsersResponse) Descriptor() ([]byte, []int) {
+	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListUsersResponse) GetItems() []*UserResponse {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ListUsersResponse) GetPagination() *PaginationMetadata {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
 type UpdateProfileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -350,7 +522,7 @@ type UpdateProfileRequest struct {
 
 func (x *UpdateProfileRequest) Reset() {
 	*x = UpdateProfileRequest{}
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[6]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -362,7 +534,7 @@ func (x *UpdateProfileRequest) String() string {
 func (*UpdateProfileRequest) ProtoMessage() {}
 
 func (x *UpdateProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[6]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -375,7 +547,7 @@ func (x *UpdateProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProfileRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProfileRequest) Descriptor() ([]byte, []int) {
-	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{6}
+	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UpdateProfileRequest) GetName() string {
@@ -395,7 +567,7 @@ type ChangePasswordRequest struct {
 
 func (x *ChangePasswordRequest) Reset() {
 	*x = ChangePasswordRequest{}
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[7]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -407,7 +579,7 @@ func (x *ChangePasswordRequest) String() string {
 func (*ChangePasswordRequest) ProtoMessage() {}
 
 func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[7]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -420,7 +592,7 @@ func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePasswordRequest.ProtoReflect.Descriptor instead.
 func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
-	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{7}
+	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ChangePasswordRequest) GetCurrentPassword() string {
@@ -445,7 +617,7 @@ type ChangePasswordResponse struct {
 
 func (x *ChangePasswordResponse) Reset() {
 	*x = ChangePasswordResponse{}
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[8]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -457,7 +629,7 @@ func (x *ChangePasswordResponse) String() string {
 func (*ChangePasswordResponse) ProtoMessage() {}
 
 func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[8]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -470,7 +642,7 @@ func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePasswordResponse.ProtoReflect.Descriptor instead.
 func (*ChangePasswordResponse) Descriptor() ([]byte, []int) {
-	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{8}
+	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{11}
 }
 
 type ChangeRoleRequest struct {
@@ -483,7 +655,7 @@ type ChangeRoleRequest struct {
 
 func (x *ChangeRoleRequest) Reset() {
 	*x = ChangeRoleRequest{}
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[9]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -495,7 +667,7 @@ func (x *ChangeRoleRequest) String() string {
 func (*ChangeRoleRequest) ProtoMessage() {}
 
 func (x *ChangeRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[9]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -508,7 +680,7 @@ func (x *ChangeRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeRoleRequest.ProtoReflect.Descriptor instead.
 func (*ChangeRoleRequest) Descriptor() ([]byte, []int) {
-	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{9}
+	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ChangeRoleRequest) GetUserId() string {
@@ -540,7 +712,7 @@ type UserResponse struct {
 
 func (x *UserResponse) Reset() {
 	*x = UserResponse{}
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[10]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -552,7 +724,7 @@ func (x *UserResponse) String() string {
 func (*UserResponse) ProtoMessage() {}
 
 func (x *UserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[10]
+	mi := &file_boilerplate_v1_boilerplate_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -565,7 +737,7 @@ func (x *UserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserResponse.ProtoReflect.Descriptor instead.
 func (*UserResponse) Descriptor() ([]byte, []int) {
-	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{10}
+	return file_boilerplate_v1_boilerplate_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UserResponse) GetId() string {
@@ -640,7 +812,22 @@ const file_boilerplate_v1_boilerplate_proto_rawDesc = "" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
 	"\x04role\x18\x04 \x01(\tR\x04role\"\x0e\n" +
-	"\fGetMeRequest\"*\n" +
+	"\fGetMeRequest\"C\n" +
+	"\x10ListUsersRequest\x12\x12\n" +
+	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\"\x87\x01\n" +
+	"\x12PaginationMetadata\x12\x12\n" +
+	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1f\n" +
+	"\vtotal_items\x18\x03 \x01(\x03R\n" +
+	"totalItems\x12\x1f\n" +
+	"\vtotal_pages\x18\x04 \x01(\x05R\n" +
+	"totalPages\"\x8b\x01\n" +
+	"\x11ListUsersResponse\x122\n" +
+	"\x05items\x18\x01 \x03(\v2\x1c.boilerplate.v1.UserResponseR\x05items\x12B\n" +
+	"\n" +
+	"pagination\x18\x02 \x01(\v2\".boilerplate.v1.PaginationMetadataR\n" +
+	"pagination\"*\n" +
 	"\x14UpdateProfileRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"e\n" +
 	"\x15ChangePasswordRequest\x12)\n" +
@@ -663,9 +850,10 @@ const file_boilerplate_v1_boilerplate_proto_rawDesc = "" +
 	"\vAuthService\x12I\n" +
 	"\bRegister\x12\x1f.boilerplate.v1.RegisterRequest\x1a\x1c.boilerplate.v1.AuthResponse\x12C\n" +
 	"\x05Login\x12\x1c.boilerplate.v1.LoginRequest\x1a\x1c.boilerplate.v1.AuthResponse\x12Q\n" +
-	"\fRefreshToken\x12#.boilerplate.v1.RefreshTokenRequest\x1a\x1c.boilerplate.v1.AuthResponse2\xd7\x02\n" +
+	"\fRefreshToken\x12#.boilerplate.v1.RefreshTokenRequest\x1a\x1c.boilerplate.v1.AuthResponse2\xa9\x03\n" +
 	"\vUserService\x12C\n" +
-	"\x05GetMe\x12\x1c.boilerplate.v1.GetMeRequest\x1a\x1c.boilerplate.v1.UserResponse\x12S\n" +
+	"\x05GetMe\x12\x1c.boilerplate.v1.GetMeRequest\x1a\x1c.boilerplate.v1.UserResponse\x12P\n" +
+	"\tListUsers\x12 .boilerplate.v1.ListUsersRequest\x1a!.boilerplate.v1.ListUsersResponse\x12S\n" +
 	"\rUpdateProfile\x12$.boilerplate.v1.UpdateProfileRequest\x1a\x1c.boilerplate.v1.UserResponse\x12_\n" +
 	"\x0eChangePassword\x12%.boilerplate.v1.ChangePasswordRequest\x1a&.boilerplate.v1.ChangePasswordResponse\x12M\n" +
 	"\n" +
@@ -683,7 +871,7 @@ func file_boilerplate_v1_boilerplate_proto_rawDescGZIP() []byte {
 	return file_boilerplate_v1_boilerplate_proto_rawDescData
 }
 
-var file_boilerplate_v1_boilerplate_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_boilerplate_v1_boilerplate_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_boilerplate_v1_boilerplate_proto_goTypes = []any{
 	(*RegisterRequest)(nil),        // 0: boilerplate.v1.RegisterRequest
 	(*LoginRequest)(nil),           // 1: boilerplate.v1.LoginRequest
@@ -691,33 +879,40 @@ var file_boilerplate_v1_boilerplate_proto_goTypes = []any{
 	(*AuthResponse)(nil),           // 3: boilerplate.v1.AuthResponse
 	(*UserSummary)(nil),            // 4: boilerplate.v1.UserSummary
 	(*GetMeRequest)(nil),           // 5: boilerplate.v1.GetMeRequest
-	(*UpdateProfileRequest)(nil),   // 6: boilerplate.v1.UpdateProfileRequest
-	(*ChangePasswordRequest)(nil),  // 7: boilerplate.v1.ChangePasswordRequest
-	(*ChangePasswordResponse)(nil), // 8: boilerplate.v1.ChangePasswordResponse
-	(*ChangeRoleRequest)(nil),      // 9: boilerplate.v1.ChangeRoleRequest
-	(*UserResponse)(nil),           // 10: boilerplate.v1.UserResponse
+	(*ListUsersRequest)(nil),       // 6: boilerplate.v1.ListUsersRequest
+	(*PaginationMetadata)(nil),     // 7: boilerplate.v1.PaginationMetadata
+	(*ListUsersResponse)(nil),      // 8: boilerplate.v1.ListUsersResponse
+	(*UpdateProfileRequest)(nil),   // 9: boilerplate.v1.UpdateProfileRequest
+	(*ChangePasswordRequest)(nil),  // 10: boilerplate.v1.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil), // 11: boilerplate.v1.ChangePasswordResponse
+	(*ChangeRoleRequest)(nil),      // 12: boilerplate.v1.ChangeRoleRequest
+	(*UserResponse)(nil),           // 13: boilerplate.v1.UserResponse
 }
 var file_boilerplate_v1_boilerplate_proto_depIdxs = []int32{
 	4,  // 0: boilerplate.v1.AuthResponse.user:type_name -> boilerplate.v1.UserSummary
-	0,  // 1: boilerplate.v1.AuthService.Register:input_type -> boilerplate.v1.RegisterRequest
-	1,  // 2: boilerplate.v1.AuthService.Login:input_type -> boilerplate.v1.LoginRequest
-	2,  // 3: boilerplate.v1.AuthService.RefreshToken:input_type -> boilerplate.v1.RefreshTokenRequest
-	5,  // 4: boilerplate.v1.UserService.GetMe:input_type -> boilerplate.v1.GetMeRequest
-	6,  // 5: boilerplate.v1.UserService.UpdateProfile:input_type -> boilerplate.v1.UpdateProfileRequest
-	7,  // 6: boilerplate.v1.UserService.ChangePassword:input_type -> boilerplate.v1.ChangePasswordRequest
-	9,  // 7: boilerplate.v1.UserService.ChangeRole:input_type -> boilerplate.v1.ChangeRoleRequest
-	3,  // 8: boilerplate.v1.AuthService.Register:output_type -> boilerplate.v1.AuthResponse
-	3,  // 9: boilerplate.v1.AuthService.Login:output_type -> boilerplate.v1.AuthResponse
-	3,  // 10: boilerplate.v1.AuthService.RefreshToken:output_type -> boilerplate.v1.AuthResponse
-	10, // 11: boilerplate.v1.UserService.GetMe:output_type -> boilerplate.v1.UserResponse
-	10, // 12: boilerplate.v1.UserService.UpdateProfile:output_type -> boilerplate.v1.UserResponse
-	8,  // 13: boilerplate.v1.UserService.ChangePassword:output_type -> boilerplate.v1.ChangePasswordResponse
-	10, // 14: boilerplate.v1.UserService.ChangeRole:output_type -> boilerplate.v1.UserResponse
-	8,  // [8:15] is the sub-list for method output_type
-	1,  // [1:8] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	13, // 1: boilerplate.v1.ListUsersResponse.items:type_name -> boilerplate.v1.UserResponse
+	7,  // 2: boilerplate.v1.ListUsersResponse.pagination:type_name -> boilerplate.v1.PaginationMetadata
+	0,  // 3: boilerplate.v1.AuthService.Register:input_type -> boilerplate.v1.RegisterRequest
+	1,  // 4: boilerplate.v1.AuthService.Login:input_type -> boilerplate.v1.LoginRequest
+	2,  // 5: boilerplate.v1.AuthService.RefreshToken:input_type -> boilerplate.v1.RefreshTokenRequest
+	5,  // 6: boilerplate.v1.UserService.GetMe:input_type -> boilerplate.v1.GetMeRequest
+	6,  // 7: boilerplate.v1.UserService.ListUsers:input_type -> boilerplate.v1.ListUsersRequest
+	9,  // 8: boilerplate.v1.UserService.UpdateProfile:input_type -> boilerplate.v1.UpdateProfileRequest
+	10, // 9: boilerplate.v1.UserService.ChangePassword:input_type -> boilerplate.v1.ChangePasswordRequest
+	12, // 10: boilerplate.v1.UserService.ChangeRole:input_type -> boilerplate.v1.ChangeRoleRequest
+	3,  // 11: boilerplate.v1.AuthService.Register:output_type -> boilerplate.v1.AuthResponse
+	3,  // 12: boilerplate.v1.AuthService.Login:output_type -> boilerplate.v1.AuthResponse
+	3,  // 13: boilerplate.v1.AuthService.RefreshToken:output_type -> boilerplate.v1.AuthResponse
+	13, // 14: boilerplate.v1.UserService.GetMe:output_type -> boilerplate.v1.UserResponse
+	8,  // 15: boilerplate.v1.UserService.ListUsers:output_type -> boilerplate.v1.ListUsersResponse
+	13, // 16: boilerplate.v1.UserService.UpdateProfile:output_type -> boilerplate.v1.UserResponse
+	11, // 17: boilerplate.v1.UserService.ChangePassword:output_type -> boilerplate.v1.ChangePasswordResponse
+	13, // 18: boilerplate.v1.UserService.ChangeRole:output_type -> boilerplate.v1.UserResponse
+	11, // [11:19] is the sub-list for method output_type
+	3,  // [3:11] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_boilerplate_v1_boilerplate_proto_init() }
@@ -731,7 +926,7 @@ func file_boilerplate_v1_boilerplate_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_boilerplate_v1_boilerplate_proto_rawDesc), len(file_boilerplate_v1_boilerplate_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   2,
 		},
