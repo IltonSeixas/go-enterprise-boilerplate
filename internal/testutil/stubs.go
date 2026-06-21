@@ -251,3 +251,19 @@ type StubPinger struct {
 func NewStubPinger(err error) *StubPinger { return &StubPinger{Err: err} }
 
 func (p *StubPinger) Ping(_ context.Context) error { return p.Err }
+
+// StubAuditPort records every event it receives for later assertions.
+type StubAuditPort struct {
+	mu     sync.Mutex
+	Events []entity.AuditEvent
+}
+
+func NewStubAuditPort() *StubAuditPort { return &StubAuditPort{} }
+
+func (s *StubAuditPort) Record(_ context.Context, event entity.AuditEvent) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Events = append(s.Events, event)
+}
+
+var _ port.AuditPort = (*StubAuditPort)(nil)
