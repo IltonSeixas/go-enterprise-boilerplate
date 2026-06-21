@@ -28,6 +28,16 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 	return &UserRepository{pool: pool}
 }
 
+func clampLimit(limit int64) int64 {
+	if limit <= 0 {
+		return defaultFindUsersLimit
+	}
+	if limit > maxFindUsersLimit {
+		return maxFindUsersLimit
+	}
+	return limit
+}
+
 const selectFields = `id, email, password_hash, name, role, is_active, created_at, updated_at`
 
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
@@ -90,22 +100,17 @@ func (r *UserRepository) SaveFirstOwner(ctx context.Context, u *entity.User) (bo
 }
 
 func (r *UserRepository) FindPaginated(ctx context.Context, offset, limit int64) ([]*entity.User, int64, error) {
-	switch {
-	case limit <= 0:
-		limit = defaultFindUsersLimit
-	case limit > maxFindUsersLimit:
-		limit = maxFindUsersLimit
-	}
+	boundedLimit := clampLimit(limit)
 
 	rows, err := r.pool.Query(ctx,
 		`SELECT `+selectFields+` FROM users ORDER BY created_at, id OFFSET $1 LIMIT $2`,
-		offset, limit)
+		offset, boundedLimit)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
 
-	users := make([]*entity.User, 0, limit)
+	users := make([]*entity.User, 0, boundedLimit)
 	for rows.Next() {
 		user, err := scanUser(rows)
 		if err != nil {
