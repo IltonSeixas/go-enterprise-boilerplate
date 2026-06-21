@@ -98,6 +98,8 @@ func main() {
 		cfg.JWTAccessTTL,
 		cfg.JWTRefreshTTL,
 		redisClient,
+		cfg.CircuitBreaker(),
+		cfg.RetryPolicy(),
 	)
 	if err != nil {
 		log.Fatal("failed to load Ed25519 JWT keys", zap.Error(err))

@@ -29,6 +29,8 @@ func toStatus(err error) error {
 		code = codes.Unauthenticated
 	case errors.Is(err, apperror.ErrAccountInactive), errors.Is(err, apperror.ErrInsufficientPerms):
 		code = codes.PermissionDenied
+	case errors.Is(err, apperror.ErrServiceUnavailable):
+		code = codes.Unavailable
 	}
 
 	return status.Error(code, err.Error())
