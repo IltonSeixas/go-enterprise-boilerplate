@@ -105,6 +105,8 @@ func domainStatus(err error) int {
 	case apperror.ErrAccountInactive,
 		apperror.ErrInsufficientPerms:
 		return http.StatusForbidden
+	case apperror.ErrServiceUnavailable:
+		return http.StatusServiceUnavailable
 	default:
 		return http.StatusInternalServerError
 	}
