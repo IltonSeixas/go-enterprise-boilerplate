@@ -63,6 +63,7 @@ func main() {
 	defer redisClient.Close()
 
 	var userRepo repository.UserRepository
+	var dbPinger handler.Pinger
 	switch cfg.Adapter {
 	case "postgres":
 		pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
@@ -77,6 +78,7 @@ func main() {
 
 		log.Info("using postgres adapter")
 		userRepo = postgres.NewUserRepository(pool)
+		dbPinger = pool
 	default:
 		log.Info("using in-memory adapter")
 		userRepo = memory.NewUserRepository()
@@ -98,6 +100,8 @@ func main() {
 		cfg.JWTAccessTTL,
 		cfg.JWTRefreshTTL,
 		redisClient,
+		cfg.CircuitBreaker(),
+		cfg.RetryPolicy(),
 	)
 	if err != nil {
 		log.Fatal("failed to load Ed25519 JWT keys", zap.Error(err))
@@ -107,14 +111,16 @@ func main() {
 	loginUser := usecase.NewLoginUser(userRepo, hasher, tokenSvc)
 	refreshToken := usecase.NewRefreshToken(userRepo, tokenSvc)
 	getUser := usecase.NewGetUser(userRepo)
+	listUsers := usecase.NewListUsers(userRepo)
 	updateProfile := usecase.NewUpdateProfile(userRepo)
 	changePassword := usecase.NewChangePassword(userRepo, hasher)
 	changeRole := usecase.NewChangeUserRole(userRepo)
 
 	authHandler := handler.NewAuthHandler(registerUser, loginUser, refreshToken)
-	userHandler := handler.NewUserHandler(getUser, updateProfile, changePassword, changeRole)
+	userHandler := handler.NewUserHandler(getUser, listUsers, updateProfile, changePassword, changeRole)
+	healthHandler := handler.NewHealthHandler(handler.RedisPinger{Client: redisClient}, dbPinger)
 
-	router := httpinterface.NewRouter(authHandler, userHandler, tokenSvc, userRepo, cfg.AllowedOriginList())
+	router := httpinterface.NewRouter(authHandler, userHandler, healthHandler, tokenSvc, userRepo, cfg.AllowedOriginList())
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
@@ -134,7 +140,7 @@ func main() {
 		grpc.UnaryInterceptor(grpcinterface.UnaryAuthInterceptor(tokenSvc, userRepo)),
 	)
 	pb.RegisterAuthServiceServer(grpcServer, grpcinterface.NewAuthServer(registerUser, loginUser, refreshToken))
-	pb.RegisterUserServiceServer(grpcServer, grpcinterface.NewUserServer(getUser, updateProfile, changePassword, changeRole))
+	pb.RegisterUserServiceServer(grpcServer, grpcinterface.NewUserServer(getUser, listUsers, updateProfile, changePassword, changeRole))
 	reflection.Register(grpcServer)
 
 	quit := make(chan os.Signal, 1)

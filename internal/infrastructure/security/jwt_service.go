@@ -3,6 +3,7 @@ package security
 import (
 	"context"
 	"crypto/ed25519"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/port"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/apperror"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/entity"
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/resilience"
 )
 
 type jwtClaims struct {
@@ -21,16 +23,24 @@ type jwtClaims struct {
 }
 
 type JWTService struct {
-	privateKey ed25519.PrivateKey
-	publicKey  ed25519.PublicKey
-	accessTTL  time.Duration
-	refreshTTL time.Duration
-	redis      *redis.Client
+	privateKey   ed25519.PrivateKey
+	publicKey    ed25519.PublicKey
+	accessTTL    time.Duration
+	refreshTTL   time.Duration
+	redis        *redis.Client
+	redisBreaker *resilience.CircuitBreaker
+	retryPolicy  resilience.RetryPolicy
 }
 
 // privateKeyPEM and publicKeyPEM must be PKCS#8 PEM-encoded Ed25519 keys,
 // e.g. generated via `openssl genpkey -algorithm ed25519`.
-func NewJWTService(privateKeyPEM, publicKeyPEM []byte, accessTTL, refreshTTL time.Duration, redis *redis.Client) (*JWTService, error) {
+func NewJWTService(
+	privateKeyPEM, publicKeyPEM []byte,
+	accessTTL, refreshTTL time.Duration,
+	redis *redis.Client,
+	redisBreaker *resilience.CircuitBreaker,
+	retryPolicy resilience.RetryPolicy,
+) (*JWTService, error) {
 	privateKey, err := jwt.ParseEdPrivateKeyFromPEM(privateKeyPEM)
 	if err != nil {
 		return nil, fmt.Errorf("parse JWT private key: %w", err)
@@ -42,12 +52,18 @@ func NewJWTService(privateKeyPEM, publicKeyPEM []byte, accessTTL, refreshTTL tim
 	}
 
 	return &JWTService{
-		privateKey: privateKey.(ed25519.PrivateKey),
-		publicKey:  publicKey.(ed25519.PublicKey),
-		accessTTL:  accessTTL,
-		refreshTTL: refreshTTL,
-		redis:      redis,
+		privateKey:   privateKey.(ed25519.PrivateKey),
+		publicKey:    publicKey.(ed25519.PublicKey),
+		accessTTL:    accessTTL,
+		refreshTTL:   refreshTTL,
+		redis:        redis,
+		redisBreaker: redisBreaker,
+		retryPolicy:  retryPolicy,
 	}, nil
+}
+
+func isRedisRetryable(err error) bool {
+	return err != nil && err != redis.Nil
 }
 
 func (s *JWTService) GeneratePair(ctx context.Context, userID uuid.UUID, role entity.Role) (port.TokenPair, error) {
@@ -68,12 +84,14 @@ func (s *JWTService) GeneratePair(ctx context.Context, userID uuid.UUID, role en
 
 	refreshToken := uuid.New().String()
 
-	if err = s.redis.Set(
-		ctx,
-		refreshKey(refreshToken),
-		userID.String(),
-		s.refreshTTL,
-	).Err(); err != nil {
+	_, err = resilience.CallWithResilience(ctx, s.redisBreaker, s.retryPolicy, isRedisRetryable,
+		func(ctx context.Context) (struct{}, error) {
+			return struct{}{}, s.redis.Set(ctx, refreshKey(refreshToken), userID.String(), s.refreshTTL).Err()
+		})
+	if err != nil {
+		if errors.Is(err, apperror.ErrServiceUnavailable) {
+			return port.TokenPair{}, err
+		}
 		return port.TokenPair{}, apperror.ErrInternal
 	}
 
@@ -105,11 +123,17 @@ func (s *JWTService) ValidateAccessToken(token string) (port.AccessTokenClaims, 
 }
 
 func (s *JWTService) FindUserIDByRefreshToken(ctx context.Context, token string) (uuid.UUID, bool, error) {
-	stored, err := s.redis.Get(ctx, refreshKey(token)).Result()
+	stored, err := resilience.CallWithResilience(ctx, s.redisBreaker, s.retryPolicy, isRedisRetryable,
+		func(ctx context.Context) (string, error) {
+			return s.redis.Get(ctx, refreshKey(token)).Result()
+		})
 	if err == redis.Nil {
 		return uuid.UUID{}, false, nil
 	}
 	if err != nil {
+		if errors.Is(err, apperror.ErrServiceUnavailable) {
+			return uuid.UUID{}, false, err
+		}
 		return uuid.UUID{}, false, apperror.ErrInternal
 	}
 
@@ -122,12 +146,28 @@ func (s *JWTService) FindUserIDByRefreshToken(ctx context.Context, token string)
 }
 
 func (s *JWTService) RotateRefreshToken(ctx context.Context, oldToken string, userID uuid.UUID, role entity.Role) (port.TokenPair, error) {
-	stored, err := s.redis.Get(ctx, refreshKey(oldToken)).Result()
-	if err != nil || stored != userID.String() {
+	stored, err := resilience.CallWithResilience(ctx, s.redisBreaker, s.retryPolicy, isRedisRetryable,
+		func(ctx context.Context) (string, error) {
+			return s.redis.Get(ctx, refreshKey(oldToken)).Result()
+		})
+	if err != nil {
+		if errors.Is(err, apperror.ErrServiceUnavailable) {
+			return port.TokenPair{}, err
+		}
+		return port.TokenPair{}, apperror.ErrTokenInvalid
+	}
+	if stored != userID.String() {
 		return port.TokenPair{}, apperror.ErrTokenInvalid
 	}
 
-	if err = s.redis.Del(ctx, refreshKey(oldToken)).Err(); err != nil {
+	_, err = resilience.CallWithResilience(ctx, s.redisBreaker, s.retryPolicy, isRedisRetryable,
+		func(ctx context.Context) (struct{}, error) {
+			return struct{}{}, s.redis.Del(ctx, refreshKey(oldToken)).Err()
+		})
+	if err != nil {
+		if errors.Is(err, apperror.ErrServiceUnavailable) {
+			return port.TokenPair{}, err
+		}
 		return port.TokenPair{}, apperror.ErrInternal
 	}
 
@@ -135,7 +175,11 @@ func (s *JWTService) RotateRefreshToken(ctx context.Context, oldToken string, us
 }
 
 func (s *JWTService) RevokeRefreshToken(ctx context.Context, token string) error {
-	return s.redis.Del(ctx, refreshKey(token)).Err()
+	_, err := resilience.CallWithResilience(ctx, s.redisBreaker, s.retryPolicy, isRedisRetryable,
+		func(ctx context.Context) (struct{}, error) {
+			return struct{}{}, s.redis.Del(ctx, refreshKey(token)).Err()
+		})
+	return err
 }
 
 var _ port.TokenService = (*JWTService)(nil)

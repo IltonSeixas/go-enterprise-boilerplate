@@ -1,8 +1,6 @@
 package http
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/time/rate"
@@ -16,6 +14,7 @@ import (
 func NewRouter(
 	authH *handler.AuthHandler,
 	userH *handler.UserHandler,
+	healthH *handler.HealthHandler,
 	tokens port.TokenService,
 	users repository.UserRepository,
 	allowedOrigins []string,
@@ -27,8 +26,8 @@ func NewRouter(
 	r.Use(middleware.CORS(allowedOrigins))
 	r.Use(middleware.RateLimit(rate.Limit(100), 20))
 
-	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
-	r.GET("/ready", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ready"}) })
+	r.GET("/health", healthH.Health)
+	r.GET("/ready", healthH.Ready)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	v1 := r.Group("/v1")
@@ -47,6 +46,7 @@ func NewRouter(
 			protected.GET("/me", userH.GetMe)
 			protected.PUT("/me", userH.UpdateMe)
 			protected.PUT("/me/password", userH.ChangePassword)
+			protected.GET("", userH.ListUsers)
 			protected.GET("/:id", userH.GetUser)
 			protected.PUT("/:id/role", userH.ChangeRole)
 		}

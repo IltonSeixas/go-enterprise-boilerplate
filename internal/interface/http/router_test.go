@@ -31,12 +31,15 @@ func buildTestRouter() *gin.Engine {
 	)
 	userH := handler.NewUserHandler(
 		usecase.NewGetUser(repo),
+		usecase.NewListUsers(repo),
 		usecase.NewUpdateProfile(repo),
 		usecase.NewChangePassword(repo, hasher),
 		usecase.NewChangeUserRole(repo),
 	)
 
-	return httpinterface.NewRouter(authH, userH, tokens, repo, []string{"https://app.example.com"})
+	healthH := handler.NewHealthHandler(testutil.NewStubPinger(nil), testutil.NewStubPinger(nil))
+
+	return httpinterface.NewRouter(authH, userH, healthH, tokens, repo, []string{"https://app.example.com"})
 }
 
 func TestRouter_HealthEndpoint(t *testing.T) {
