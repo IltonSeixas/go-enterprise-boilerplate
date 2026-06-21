@@ -5,21 +5,28 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/resilience"
 )
 
 type Config struct {
-	Host              string        `mapstructure:"HOST"`
-	Port              int           `mapstructure:"PORT"`
-	GRPCPort          int           `mapstructure:"GRPC_PORT"`
-	Adapter           string        `mapstructure:"ADAPTER"`
-	DatabaseURL       string        `mapstructure:"DATABASE_URL"`
-	RedisURL          string        `mapstructure:"REDIS_URL"`
-	JWTPrivateKeyPath string        `mapstructure:"JWT_PRIVATE_KEY_PATH"`
-	JWTPublicKeyPath  string        `mapstructure:"JWT_PUBLIC_KEY_PATH"`
-	JWTAccessTTL      time.Duration `mapstructure:"JWT_ACCESS_TTL"`
-	JWTRefreshTTL     time.Duration `mapstructure:"JWT_REFRESH_TTL"`
-	OTLPEndpoint      string        `mapstructure:"OTLP_ENDPOINT"`
-	AllowedOrigins    string        `mapstructure:"ALLOWED_ORIGINS"`
+	Host                   string        `mapstructure:"HOST"`
+	Port                   int           `mapstructure:"PORT"`
+	GRPCPort               int           `mapstructure:"GRPC_PORT"`
+	Adapter                string        `mapstructure:"ADAPTER"`
+	DatabaseURL            string        `mapstructure:"DATABASE_URL"`
+	RedisURL               string        `mapstructure:"REDIS_URL"`
+	JWTPrivateKeyPath      string        `mapstructure:"JWT_PRIVATE_KEY_PATH"`
+	JWTPublicKeyPath       string        `mapstructure:"JWT_PUBLIC_KEY_PATH"`
+	JWTAccessTTL           time.Duration `mapstructure:"JWT_ACCESS_TTL"`
+	JWTRefreshTTL          time.Duration `mapstructure:"JWT_REFRESH_TTL"`
+	OTLPEndpoint           string        `mapstructure:"OTLP_ENDPOINT"`
+	AllowedOrigins         string        `mapstructure:"ALLOWED_ORIGINS"`
+	CircuitFailThreshold   int           `mapstructure:"CIRCUIT_FAILURE_THRESHOLD"`
+	CircuitResetTimeout    time.Duration `mapstructure:"CIRCUIT_RESET_TIMEOUT"`
+	RetryMaxAttempts       int           `mapstructure:"RETRY_MAX_ATTEMPTS"`
+	RetryInitialBackoff    time.Duration `mapstructure:"RETRY_INITIAL_BACKOFF"`
+	RetryBackoffMultiplier int           `mapstructure:"RETRY_BACKOFF_MULTIPLIER"`
 }
 
 func Load() (*Config, error) {
@@ -34,6 +41,11 @@ func Load() (*Config, error) {
 	viper.SetDefault("JWT_REFRESH_TTL", 7*24*time.Hour)
 	viper.SetDefault("OTLP_ENDPOINT", "localhost:4317")
 	viper.SetDefault("ALLOWED_ORIGINS", "http://localhost:3000")
+	viper.SetDefault("CIRCUIT_FAILURE_THRESHOLD", 5)
+	viper.SetDefault("CIRCUIT_RESET_TIMEOUT", 30*time.Second)
+	viper.SetDefault("RETRY_MAX_ATTEMPTS", 3)
+	viper.SetDefault("RETRY_INITIAL_BACKOFF", 50*time.Millisecond)
+	viper.SetDefault("RETRY_BACKOFF_MULTIPLIER", 2)
 
 	// viper.AutomaticEnv only binds keys it already knows about, so keys
 	// with no default must be bound explicitly to be read from the
@@ -62,4 +74,15 @@ func (c *Config) AllowedOriginList() []string {
 		}
 	}
 	return origins
+}
+
+// CircuitBreaker builds a CircuitBreaker from the configured threshold and
+// reset timeout.
+func (c *Config) CircuitBreaker() *resilience.CircuitBreaker {
+	return resilience.NewCircuitBreaker(c.CircuitFailThreshold, c.CircuitResetTimeout)
+}
+
+// RetryPolicy builds a RetryPolicy from the configured retry settings.
+func (c *Config) RetryPolicy() resilience.RetryPolicy {
+	return resilience.NewRetryPolicy(c.RetryMaxAttempts, c.RetryInitialBackoff, c.RetryBackoffMultiplier)
 }

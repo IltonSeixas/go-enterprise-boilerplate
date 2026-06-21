@@ -14,4 +14,5 @@ var (
 	ErrInternal           = errors.New("internal error")
 	ErrTokenInvalid       = errors.New("token is invalid or expired")
 	ErrInvalidRole        = errors.New("invalid role")
+	ErrServiceUnavailable = errors.New("service temporarily unavailable")
 )
