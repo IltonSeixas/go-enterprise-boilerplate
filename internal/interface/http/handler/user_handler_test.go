@@ -39,6 +39,7 @@ func newUserWithRole(t *testing.T, email string, role entity.Role) *entity.User 
 func newUserHandler(repo *testutil.StubUserRepo) *handler.UserHandler {
 	return handler.NewUserHandler(
 		usecase.NewGetUser(repo),
+		usecase.NewListUsers(repo),
 		usecase.NewUpdateProfile(repo),
 		usecase.NewChangePassword(repo, testutil.NewStubHasher()),
 		usecase.NewChangeUserRole(repo),

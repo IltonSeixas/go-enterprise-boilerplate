@@ -2,6 +2,7 @@ package memory_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -87,4 +88,35 @@ func TestDelete(t *testing.T) {
 	require.NoError(t, repo.Delete(context.Background(), u.ID().UUID()))
 	_, err := repo.FindByID(context.Background(), u.ID().UUID())
 	assert.ErrorIs(t, err, apperror.ErrUserNotFound)
+}
+
+func TestFindPaginated_ReturnsRequestedSliceAndTotal(t *testing.T) {
+	repo := memory.NewUserRepository()
+	for i := 0; i < 5; i++ {
+		require.NoError(t, repo.Save(context.Background(), makeUser(t, fmt.Sprintf("user%d@example.com", i))))
+	}
+
+	page, total, err := repo.FindPaginated(context.Background(), 1, 2)
+	require.NoError(t, err)
+	assert.Equal(t, int64(5), total)
+	assert.Len(t, page, 2)
+}
+
+func TestFindPaginated_PastTheEnd_ReturnsEmptyPage(t *testing.T) {
+	repo := memory.NewUserRepository()
+	require.NoError(t, repo.Save(context.Background(), makeUser(t, "only@example.com")))
+
+	page, total, err := repo.FindPaginated(context.Background(), 10, 5)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total)
+	assert.Empty(t, page)
+}
+
+func TestFindPaginated_NoUsers_ReturnsEmptyPageAndZeroTotal(t *testing.T) {
+	repo := memory.NewUserRepository()
+
+	page, total, err := repo.FindPaginated(context.Background(), 0, 20)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), total)
+	assert.Empty(t, page)
 }

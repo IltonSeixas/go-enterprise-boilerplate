@@ -18,4 +18,7 @@ type UserRepository interface {
 	// SaveFirstOwner atomically saves user only if no owner exists yet.
 	// Returns (true, nil) on success, (false, nil) if an owner already exists.
 	SaveFirstOwner(ctx context.Context, user *entity.User) (bool, error)
+	// FindPaginated returns a page of users ordered by created_at, id together
+	// with the total number of users in the full collection.
+	FindPaginated(ctx context.Context, offset, limit int64) ([]*entity.User, int64, error)
 }

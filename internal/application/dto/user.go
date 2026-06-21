@@ -30,3 +30,20 @@ type UserOutput struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type ListUsersInput struct {
+	Page     int32
+	PageSize int32
+}
+
+type PaginationOutput struct {
+	Page       int32
+	PageSize   int32
+	TotalItems int64
+	TotalPages int32
+}
+
+type ListUsersOutput struct {
+	Items      []UserOutput
+	Pagination PaginationOutput
+}

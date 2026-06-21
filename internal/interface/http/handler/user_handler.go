@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -14,6 +15,7 @@ import (
 
 type UserHandler struct {
 	getUser        *usecase.GetUser
+	listUsers      *usecase.ListUsers
 	updateProfile  *usecase.UpdateProfile
 	changePassword *usecase.ChangePassword
 	changeRole     *usecase.ChangeUserRole
@@ -21,12 +23,14 @@ type UserHandler struct {
 
 func NewUserHandler(
 	getUser *usecase.GetUser,
+	listUsers *usecase.ListUsers,
 	updateProfile *usecase.UpdateProfile,
 	changePassword *usecase.ChangePassword,
 	changeRole *usecase.ChangeUserRole,
 ) *UserHandler {
 	return &UserHandler{
 		getUser:        getUser,
+		listUsers:      listUsers,
 		updateProfile:  updateProfile,
 		changePassword: changePassword,
 		changeRole:     changeRole,
@@ -61,6 +65,27 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	}
 
 	out, err := h.getUser.Execute(c.Request.Context(), claims.UserID, claims.Role, targetID)
+	if err != nil {
+		c.JSON(domainStatus(err), gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func (h *UserHandler) ListUsers(c *gin.Context) {
+	claims, ok := middleware.GetClaims(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	page, _ := strconv.Atoi(c.Query("page"))
+	pageSize, _ := strconv.Atoi(c.Query("page_size"))
+
+	out, err := h.listUsers.Execute(c.Request.Context(), claims.Role, dto.ListUsersInput{
+		Page:     int32(page),
+		PageSize: int32(pageSize),
+	})
 	if err != nil {
 		c.JSON(domainStatus(err), gin.H{"error": err.Error()})
 		return

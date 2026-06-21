@@ -47,6 +47,7 @@ func NewRouter(
 			protected.GET("/me", userH.GetMe)
 			protected.PUT("/me", userH.UpdateMe)
 			protected.PUT("/me/password", userH.ChangePassword)
+			protected.GET("", userH.ListUsers)
 			protected.GET("/:id", userH.GetUser)
 			protected.PUT("/:id/role", userH.ChangeRole)
 		}
