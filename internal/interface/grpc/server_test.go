@@ -48,14 +48,14 @@ func startServer(t *testing.T) (clients, func()) {
 		Role:   entity.RoleUser,
 	})
 
-	registerUser := usecase.NewRegisterUser(repo, hasher, tokens)
-	loginUser := usecase.NewLoginUser(repo, hasher, tokens)
-	refreshToken := usecase.NewRefreshToken(repo, tokens)
+	registerUser := usecase.NewRegisterUser(repo, hasher, tokens, testutil.NewStubAuditPort())
+	loginUser := usecase.NewLoginUser(repo, hasher, tokens, testutil.NewStubAuditPort())
+	refreshToken := usecase.NewRefreshToken(repo, tokens, testutil.NewStubAuditPort())
 	getUser := usecase.NewGetUser(repo)
 	listUsers := usecase.NewListUsers(repo)
 	updateProfile := usecase.NewUpdateProfile(repo)
-	changePassword := usecase.NewChangePassword(repo, hasher)
-	changeRole := usecase.NewChangeUserRole(repo)
+	changePassword := usecase.NewChangePassword(repo, hasher, testutil.NewStubAuditPort())
+	changeRole := usecase.NewChangeUserRole(repo, testutil.NewStubAuditPort())
 
 	lis := bufconn.Listen(bufSize)
 	srv := grpc.NewServer(
@@ -155,8 +155,8 @@ func TestUserService_ChangeRole_OwnerCanPromoteAnotherUser(t *testing.T) {
 	getUser := usecase.NewGetUser(repo)
 	listUsers := usecase.NewListUsers(repo)
 	updateProfile := usecase.NewUpdateProfile(repo)
-	changePassword := usecase.NewChangePassword(repo, hasher)
-	changeRole := usecase.NewChangeUserRole(repo)
+	changePassword := usecase.NewChangePassword(repo, hasher, testutil.NewStubAuditPort())
+	changeRole := usecase.NewChangeUserRole(repo, testutil.NewStubAuditPort())
 
 	lis := bufconn.Listen(bufSize)
 	srv := grpc.NewServer(

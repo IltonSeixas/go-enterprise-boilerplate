@@ -23,9 +23,9 @@ import (
 func newAuthHandler(repo *testutil.StubUserRepo, tokens port.TokenService) *handler.AuthHandler {
 	hasher := testutil.NewStubHasher()
 	return handler.NewAuthHandler(
-		usecase.NewRegisterUser(repo, hasher, tokens),
-		usecase.NewLoginUser(repo, hasher, tokens),
-		usecase.NewRefreshToken(repo, tokens),
+		usecase.NewRegisterUser(repo, hasher, tokens, testutil.NewStubAuditPort()),
+		usecase.NewLoginUser(repo, hasher, tokens, testutil.NewStubAuditPort()),
+		usecase.NewRefreshToken(repo, tokens, testutil.NewStubAuditPort()),
 	)
 }
 

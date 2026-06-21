@@ -25,16 +25,16 @@ func buildTestRouter() *gin.Engine {
 	tokens := testutil.NewStubTokenService()
 
 	authH := handler.NewAuthHandler(
-		usecase.NewRegisterUser(repo, hasher, tokens),
-		usecase.NewLoginUser(repo, hasher, tokens),
-		usecase.NewRefreshToken(repo, tokens),
+		usecase.NewRegisterUser(repo, hasher, tokens, testutil.NewStubAuditPort()),
+		usecase.NewLoginUser(repo, hasher, tokens, testutil.NewStubAuditPort()),
+		usecase.NewRefreshToken(repo, tokens, testutil.NewStubAuditPort()),
 	)
 	userH := handler.NewUserHandler(
 		usecase.NewGetUser(repo),
 		usecase.NewListUsers(repo),
 		usecase.NewUpdateProfile(repo),
-		usecase.NewChangePassword(repo, hasher),
-		usecase.NewChangeUserRole(repo),
+		usecase.NewChangePassword(repo, hasher, testutil.NewStubAuditPort()),
+		usecase.NewChangeUserRole(repo, testutil.NewStubAuditPort()),
 	)
 
 	healthH := handler.NewHealthHandler(testutil.NewStubPinger(nil), testutil.NewStubPinger(nil))

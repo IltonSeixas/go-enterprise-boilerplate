@@ -31,7 +31,7 @@ func TestChangeUserRole_RejectsWhenActorNotFound(t *testing.T) {
 	target := userWithRole(t, "target@example.com", entity.RoleUser)
 	require.NoError(t, repo.Save(context.Background(), target))
 
-	uc := usecase.NewChangeUserRole(repo)
+	uc := usecase.NewChangeUserRole(repo, testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), uuid.New(), target.ID().UUID(), dto.ChangeRoleInput{Role: entity.RoleAdmin})
 
 	assert.ErrorIs(t, err, apperror.ErrUserNotFound)
@@ -42,7 +42,7 @@ func TestChangeUserRole_RejectsWhenTargetNotFound(t *testing.T) {
 	actor := userWithRole(t, "actor@example.com", entity.RoleOwner)
 	require.NoError(t, repo.Save(context.Background(), actor))
 
-	uc := usecase.NewChangeUserRole(repo)
+	uc := usecase.NewChangeUserRole(repo, testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), actor.ID().UUID(), uuid.New(), dto.ChangeRoleInput{Role: entity.RoleAdmin})
 
 	assert.ErrorIs(t, err, apperror.ErrUserNotFound)
@@ -55,7 +55,7 @@ func TestChangeUserRole_RejectsWhenActorLacksPermission(t *testing.T) {
 	require.NoError(t, repo.Save(context.Background(), actor))
 	require.NoError(t, repo.Save(context.Background(), target))
 
-	uc := usecase.NewChangeUserRole(repo)
+	uc := usecase.NewChangeUserRole(repo, testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), actor.ID().UUID(), target.ID().UUID(), dto.ChangeRoleInput{Role: entity.RoleAdmin})
 
 	assert.ErrorIs(t, err, apperror.ErrInsufficientPerms)
@@ -66,7 +66,7 @@ func TestChangeUserRole_RejectsWhenActorChangesOwnRole(t *testing.T) {
 	owner := userWithRole(t, "owner@example.com", entity.RoleOwner)
 	require.NoError(t, repo.Save(context.Background(), owner))
 
-	uc := usecase.NewChangeUserRole(repo)
+	uc := usecase.NewChangeUserRole(repo, testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), owner.ID().UUID(), owner.ID().UUID(), dto.ChangeRoleInput{Role: entity.RoleAdmin})
 
 	assert.ErrorIs(t, err, apperror.ErrInsufficientPerms)
@@ -79,7 +79,7 @@ func TestChangeUserRole_OwnerPromotesUserToAdminAndPersists(t *testing.T) {
 	require.NoError(t, repo.Save(context.Background(), actor))
 	require.NoError(t, repo.Save(context.Background(), target))
 
-	uc := usecase.NewChangeUserRole(repo)
+	uc := usecase.NewChangeUserRole(repo, testutil.NewStubAuditPort())
 	out, err := uc.Execute(context.Background(), actor.ID().UUID(), target.ID().UUID(), dto.ChangeRoleInput{Role: entity.RoleAdmin})
 	require.NoError(t, err)
 	assert.Equal(t, entity.RoleAdmin, out.Role)

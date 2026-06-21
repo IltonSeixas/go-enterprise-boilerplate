@@ -21,7 +21,7 @@ func TestRegisterUser_ShortPassword(t *testing.T) {
 	hasher := testutil.NewStubHasher()
 	tokens := testutil.NewStubTokenService()
 
-	uc := usecase.NewRegisterUser(repo, hasher, tokens)
+	uc := usecase.NewRegisterUser(repo, hasher, tokens, testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), dto.RegisterInput{
 		Email: "a@b.com", Password: "short", Name: "Test",
 	})
@@ -36,7 +36,7 @@ func TestRegisterUser_DuplicateEmail(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	repo.SetFindByEmailResult(existing, nil)
 
-	uc := usecase.NewRegisterUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService())
+	uc := usecase.NewRegisterUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService(), testutil.NewStubAuditPort())
 	_, err := uc.Execute(context.Background(), dto.RegisterInput{
 		Email: "a@b.com", Password: "validpassword123", Name: "Test",
 	})
@@ -47,7 +47,7 @@ func TestRegisterUser_FirstUserBecomesOwner(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	repo.SetSaveFirstOwnerResult(true, nil)
 
-	uc := usecase.NewRegisterUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService())
+	uc := usecase.NewRegisterUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService(), testutil.NewStubAuditPort())
 	out, err := uc.Execute(context.Background(), dto.RegisterInput{
 		Email: "owner@b.com", Password: "validpassword123", Name: "Owner",
 	})
@@ -59,7 +59,7 @@ func TestRegisterUser_SecondUserBecomesRegularUser(t *testing.T) {
 	repo := testutil.NewStubUserRepo()
 	repo.SetSaveFirstOwnerResult(false, nil)
 
-	uc := usecase.NewRegisterUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService())
+	uc := usecase.NewRegisterUser(repo, testutil.NewStubHasher(), testutil.NewStubTokenService(), testutil.NewStubAuditPort())
 	out, err := uc.Execute(context.Background(), dto.RegisterInput{
 		Email: "user@b.com", Password: "validpassword123", Name: "User",
 	})
@@ -72,6 +72,7 @@ func TestRegisterUser_InvalidEmail(t *testing.T) {
 		testutil.NewStubUserRepo(),
 		testutil.NewStubHasher(),
 		testutil.NewStubTokenService(),
+		testutil.NewStubAuditPort(),
 	)
 	_, err := uc.Execute(context.Background(), dto.RegisterInput{
 		Email: "notanemail", Password: "validpassword123", Name: "Test",
