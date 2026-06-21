@@ -21,13 +21,14 @@ type UserServer struct {
 	pb.UnimplementedUserServiceServer
 
 	getUser        *usecase.GetUser
+	listUsers      *usecase.ListUsers
 	updateProfile  *usecase.UpdateProfile
 	changePassword *usecase.ChangePassword
 	changeRole     *usecase.ChangeUserRole
 }
 
-func NewUserServer(getUser *usecase.GetUser, updateProfile *usecase.UpdateProfile, changePassword *usecase.ChangePassword, changeRole *usecase.ChangeUserRole) *UserServer {
-	return &UserServer{getUser: getUser, updateProfile: updateProfile, changePassword: changePassword, changeRole: changeRole}
+func NewUserServer(getUser *usecase.GetUser, listUsers *usecase.ListUsers, updateProfile *usecase.UpdateProfile, changePassword *usecase.ChangePassword, changeRole *usecase.ChangeUserRole) *UserServer {
+	return &UserServer{getUser: getUser, listUsers: listUsers, updateProfile: updateProfile, changePassword: changePassword, changeRole: changeRole}
 }
 
 func (s *UserServer) GetMe(ctx context.Context, _ *pb.GetMeRequest) (*pb.UserResponse, error) {
@@ -41,6 +42,36 @@ func (s *UserServer) GetMe(ctx context.Context, _ *pb.GetMeRequest) (*pb.UserRes
 		return nil, toStatus(err)
 	}
 	return toUserResponse(out), nil
+}
+
+func (s *UserServer) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
+	caller, ok := callerFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing bearer token")
+	}
+
+	out, err := s.listUsers.Execute(ctx, caller.Role, dto.ListUsersInput{
+		Page:     req.GetPage(),
+		PageSize: req.GetPageSize(),
+	})
+	if err != nil {
+		return nil, toStatus(err)
+	}
+
+	items := make([]*pb.UserResponse, len(out.Items))
+	for i, item := range out.Items {
+		items[i] = toUserResponse(item)
+	}
+
+	return &pb.ListUsersResponse{
+		Items: items,
+		Pagination: &pb.PaginationMetadata{
+			Page:       out.Pagination.Page,
+			PageSize:   out.Pagination.PageSize,
+			TotalItems: out.Pagination.TotalItems,
+			TotalPages: out.Pagination.TotalPages,
+		},
+	}, nil
 }
 
 func (s *UserServer) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRequest) (*pb.UserResponse, error) {

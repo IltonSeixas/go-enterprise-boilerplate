@@ -52,6 +52,7 @@ func startServer(t *testing.T) (clients, func()) {
 	loginUser := usecase.NewLoginUser(repo, hasher, tokens)
 	refreshToken := usecase.NewRefreshToken(repo, tokens)
 	getUser := usecase.NewGetUser(repo)
+	listUsers := usecase.NewListUsers(repo)
 	updateProfile := usecase.NewUpdateProfile(repo)
 	changePassword := usecase.NewChangePassword(repo, hasher)
 	changeRole := usecase.NewChangeUserRole(repo)
@@ -61,7 +62,7 @@ func startServer(t *testing.T) (clients, func()) {
 		grpc.UnaryInterceptor(grpcinterface.UnaryAuthInterceptor(tokens, repo)),
 	)
 	pb.RegisterAuthServiceServer(srv, grpcinterface.NewAuthServer(registerUser, loginUser, refreshToken))
-	pb.RegisterUserServiceServer(srv, grpcinterface.NewUserServer(getUser, updateProfile, changePassword, changeRole))
+	pb.RegisterUserServiceServer(srv, grpcinterface.NewUserServer(getUser, listUsers, updateProfile, changePassword, changeRole))
 
 	go func() {
 		_ = srv.Serve(lis)
@@ -152,6 +153,7 @@ func TestUserService_ChangeRole_OwnerCanPromoteAnotherUser(t *testing.T) {
 	})
 
 	getUser := usecase.NewGetUser(repo)
+	listUsers := usecase.NewListUsers(repo)
 	updateProfile := usecase.NewUpdateProfile(repo)
 	changePassword := usecase.NewChangePassword(repo, hasher)
 	changeRole := usecase.NewChangeUserRole(repo)
@@ -160,7 +162,7 @@ func TestUserService_ChangeRole_OwnerCanPromoteAnotherUser(t *testing.T) {
 	srv := grpc.NewServer(
 		grpc.UnaryInterceptor(grpcinterface.UnaryAuthInterceptor(tokens, repo)),
 	)
-	pb.RegisterUserServiceServer(srv, grpcinterface.NewUserServer(getUser, updateProfile, changePassword, changeRole))
+	pb.RegisterUserServiceServer(srv, grpcinterface.NewUserServer(getUser, listUsers, updateProfile, changePassword, changeRole))
 
 	go func() {
 		_ = srv.Serve(lis)

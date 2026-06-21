@@ -84,6 +84,35 @@ func (r *UserRepository) SaveFirstOwner(ctx context.Context, u *entity.User) (bo
 	return true, nil
 }
 
+func (r *UserRepository) FindPaginated(ctx context.Context, offset, limit int64) ([]*entity.User, int64, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT `+selectFields+` FROM users ORDER BY created_at, id OFFSET $1 LIMIT $2`,
+		offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	users := make([]*entity.User, 0, limit)
+	for rows.Next() {
+		user, err := scanUser(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	var total int64
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
 var _ repository.UserRepository = (*UserRepository)(nil)
 
 type scanner interface {
