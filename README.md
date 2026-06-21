@@ -137,6 +137,10 @@ The `PasswordHasher` interface in `domain/repository/` abstracts the algorithm f
 - CORS: explicit allow-list, never `*` in production
 - Input validation: Gin binding tags (backed by `go-playground/validator`) on all request DTOs
 
+### Audit Logging
+
+Every identity- and access-sensitive use case (registration, login success/failure, password change, role change, token refresh) records an immutable `AuditEvent` through the `AuditPort` interface in `internal/application/port/`. The in-memory adapter is the zero-config default; the PostgreSQL adapter persists to a dedicated `audit_log` table and never fails the use case it observes, degrading gracefully if the audit store itself is unavailable.
+
 ---
 
 ## API
@@ -203,6 +207,10 @@ Export to any OTLP backend:
 ```env
 OTLP_ENDPOINT=localhost:4317
 ```
+
+### Resilience
+
+Redis calls made by the JWT service (refresh token issuance, validation, rotation and revocation) are wrapped in a `Closed → Open → Half-Open` circuit breaker (`internal/infrastructure/resilience`) combined with a retry policy. A transient Redis failure that succeeds on retry counts as a single success against the breaker's failure rate, rather than inflating it.
 
 ---
 
