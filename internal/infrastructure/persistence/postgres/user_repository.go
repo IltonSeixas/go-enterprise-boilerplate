@@ -19,6 +19,11 @@ type UserRepository struct {
 	pool *pgxpool.Pool
 }
 
+const (
+	defaultFindUsersLimit int64 = 20
+	maxFindUsersLimit     int64 = 100
+)
+
 func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 	return &UserRepository{pool: pool}
 }
@@ -85,6 +90,13 @@ func (r *UserRepository) SaveFirstOwner(ctx context.Context, u *entity.User) (bo
 }
 
 func (r *UserRepository) FindPaginated(ctx context.Context, offset, limit int64) ([]*entity.User, int64, error) {
+	switch {
+	case limit <= 0:
+		limit = defaultFindUsersLimit
+	case limit > maxFindUsersLimit:
+		limit = maxFindUsersLimit
+	}
+
 	rows, err := r.pool.Query(ctx,
 		`SELECT `+selectFields+` FROM users ORDER BY created_at, id OFFSET $1 LIMIT $2`,
 		offset, limit)
