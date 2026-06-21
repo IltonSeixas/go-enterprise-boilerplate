@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -14,6 +15,7 @@ import (
 
 type UserHandler struct {
 	getUser        *usecase.GetUser
+	listUsers      *usecase.ListUsers
 	updateProfile  *usecase.UpdateProfile
 	changePassword *usecase.ChangePassword
 	changeRole     *usecase.ChangeUserRole
@@ -21,12 +23,14 @@ type UserHandler struct {
 
 func NewUserHandler(
 	getUser *usecase.GetUser,
+	listUsers *usecase.ListUsers,
 	updateProfile *usecase.UpdateProfile,
 	changePassword *usecase.ChangePassword,
 	changeRole *usecase.ChangeUserRole,
 ) *UserHandler {
 	return &UserHandler{
 		getUser:        getUser,
+		listUsers:      listUsers,
 		updateProfile:  updateProfile,
 		changePassword: changePassword,
 		changeRole:     changeRole,
@@ -61,6 +65,44 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	}
 
 	out, err := h.getUser.Execute(c.Request.Context(), claims.UserID, claims.Role, targetID)
+	if err != nil {
+		c.JSON(domainStatus(err), gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func (h *UserHandler) ListUsers(c *gin.Context) {
+	claims, ok := middleware.GetClaims(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var page int32
+	if p := c.Query("page"); p != "" {
+		parsedPage, err := strconv.ParseInt(p, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page"})
+			return
+		}
+		page = int32(parsedPage)
+	}
+
+	var pageSize int32
+	if ps := c.Query("page_size"); ps != "" {
+		parsedPageSize, err := strconv.ParseInt(ps, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page_size"})
+			return
+		}
+		pageSize = int32(parsedPageSize)
+	}
+
+	out, err := h.listUsers.Execute(c.Request.Context(), claims.Role, dto.ListUsersInput{
+		Page:     page,
+		PageSize: pageSize,
+	})
 	if err != nil {
 		c.JSON(domainStatus(err), gin.H{"error": err.Error()})
 		return

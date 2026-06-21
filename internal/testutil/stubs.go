@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	"github.com/google/uuid"
@@ -87,6 +88,36 @@ func (s *StubUserRepo) SaveFirstOwner(_ context.Context, u *entity.User) (bool, 
 		s.mu.Unlock()
 	}
 	return s.saveFirstOwnerClaimed, nil
+}
+
+func (s *StubUserRepo) FindPaginated(_ context.Context, offset, limit int64) ([]*entity.User, int64, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	users := make([]*entity.User, 0, len(s.store))
+	for _, u := range s.store {
+		users = append(users, u)
+	}
+	sort.Slice(users, func(i, j int) bool {
+		if users[i].CreatedAt().Equal(users[j].CreatedAt()) {
+			return users[i].ID().UUID().String() < users[j].ID().UUID().String()
+		}
+		return users[i].CreatedAt().Before(users[j].CreatedAt())
+	})
+
+	total := int64(len(users))
+	start := offset
+	if start > total {
+		start = total
+	}
+	end := start + limit
+	if end > total {
+		end = total
+	}
+
+	page := make([]*entity.User, end-start)
+	copy(page, users[start:end])
+	return page, total, nil
 }
 
 var _ repository.UserRepository = (*StubUserRepo)(nil)
@@ -211,3 +242,12 @@ func (s *StubTokenService) RotateRefreshToken(_ context.Context, _ string, id uu
 func (s *StubTokenService) RevokeRefreshToken(_ context.Context, _ string) error { return nil }
 
 var _ port.TokenService = (*StubTokenService)(nil)
+
+// StubPinger returns a fixed error without I/O.
+type StubPinger struct {
+	Err error
+}
+
+func NewStubPinger(err error) *StubPinger { return &StubPinger{Err: err} }
+
+func (p *StubPinger) Ping(_ context.Context) error { return p.Err }
