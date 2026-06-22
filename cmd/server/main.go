@@ -61,6 +61,9 @@ func main() {
 	if err != nil {
 		log.Fatal("invalid redis url", zap.Error(err))
 	}
+	opt.DialTimeout = cfg.RedisConnectTimeout
+	opt.ReadTimeout = cfg.RedisCommandTimeout
+	opt.WriteTimeout = cfg.RedisCommandTimeout
 	redisClient := redis.NewClient(opt)
 	defer redisClient.Close()
 
@@ -69,7 +72,17 @@ func main() {
 	var auditLog port.AuditPort
 	switch cfg.Adapter {
 	case "postgres":
-		pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+		pgxCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+		if err != nil {
+			log.Fatal("invalid postgres dsn", zap.Error(err))
+		}
+		pgxCfg.MaxConns = cfg.DBPoolMaxConns
+		pgxCfg.MinConns = cfg.DBPoolMinConns
+		pgxCfg.MaxConnIdleTime = cfg.DBPoolIdleTimeout
+		pgxCfg.MaxConnLifetime = cfg.DBPoolMaxLifetime
+		pgxCfg.ConnConfig.ConnectTimeout = cfg.DBPoolConnectTimeout
+
+		pool, err := pgxpool.NewWithConfig(ctx, pgxCfg)
 		if err != nil {
 			log.Fatal("postgres connection error", zap.Error(err))
 		}
