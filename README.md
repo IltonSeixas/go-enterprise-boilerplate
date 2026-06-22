@@ -226,6 +226,13 @@ All configuration via environment variables or `.env` file (Viper reads both).
 | `ADAPTER` | `memory` | Persistence adapter: `memory` or `postgres` |
 | `DATABASE_URL` | — | PostgreSQL DSN (required when `ADAPTER=postgres`) |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection URL (refresh token storage) |
+| `DB_POOL_MAX_CONNS` | `10` | Maximum number of pooled Postgres connections (used when `ADAPTER=postgres`) |
+| `DB_POOL_MIN_CONNS` | `2` | Minimum number of idle Postgres connections kept open |
+| `DB_POOL_CONNECT_TIMEOUT` | `30s` | Max time to wait for a free connection from the pool (Go duration string) |
+| `DB_POOL_IDLE_TIMEOUT` | `10m` | Time before an idle connection above the minimum is closed |
+| `DB_POOL_MAX_LIFETIME` | `30m` | Max lifetime of a pooled connection before it is recycled |
+| `REDIS_CONNECT_TIMEOUT` | `2s` | Max time to establish the Redis TCP connection |
+| `REDIS_COMMAND_TIMEOUT` | `2s` | Max time to wait for a Redis command response (read and write) |
 | `JWT_PRIVATE_KEY_PATH` | — | Path to the Ed25519 PEM private key used to sign access tokens |
 | `JWT_PUBLIC_KEY_PATH` | — | Path to the Ed25519 PEM public key used to verify access tokens |
 | `JWT_ACCESS_TTL` | `15m` | Access token TTL (Go duration string) |

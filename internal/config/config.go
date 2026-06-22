@@ -27,6 +27,13 @@ type Config struct {
 	RetryMaxAttempts       int           `mapstructure:"RETRY_MAX_ATTEMPTS"`
 	RetryInitialBackoff    time.Duration `mapstructure:"RETRY_INITIAL_BACKOFF"`
 	RetryBackoffMultiplier int           `mapstructure:"RETRY_BACKOFF_MULTIPLIER"`
+	DBPoolMaxConns         int32         `mapstructure:"DB_POOL_MAX_CONNS"`
+	DBPoolMinConns         int32         `mapstructure:"DB_POOL_MIN_CONNS"`
+	DBPoolConnectTimeout   time.Duration `mapstructure:"DB_POOL_CONNECT_TIMEOUT"`
+	DBPoolIdleTimeout      time.Duration `mapstructure:"DB_POOL_IDLE_TIMEOUT"`
+	DBPoolMaxLifetime      time.Duration `mapstructure:"DB_POOL_MAX_LIFETIME"`
+	RedisConnectTimeout    time.Duration `mapstructure:"REDIS_CONNECT_TIMEOUT"`
+	RedisCommandTimeout    time.Duration `mapstructure:"REDIS_COMMAND_TIMEOUT"`
 }
 
 func Load() (*Config, error) {
@@ -46,6 +53,13 @@ func Load() (*Config, error) {
 	viper.SetDefault("RETRY_MAX_ATTEMPTS", 3)
 	viper.SetDefault("RETRY_INITIAL_BACKOFF", 50*time.Millisecond)
 	viper.SetDefault("RETRY_BACKOFF_MULTIPLIER", 2)
+	viper.SetDefault("DB_POOL_MAX_CONNS", 10)
+	viper.SetDefault("DB_POOL_MIN_CONNS", 2)
+	viper.SetDefault("DB_POOL_CONNECT_TIMEOUT", 30*time.Second)
+	viper.SetDefault("DB_POOL_IDLE_TIMEOUT", 10*time.Minute)
+	viper.SetDefault("DB_POOL_MAX_LIFETIME", 30*time.Minute)
+	viper.SetDefault("REDIS_CONNECT_TIMEOUT", 2*time.Second)
+	viper.SetDefault("REDIS_COMMAND_TIMEOUT", 2*time.Second)
 
 	// viper.AutomaticEnv only binds keys it already knows about, so keys
 	// with no default must be bound explicitly to be read from the
