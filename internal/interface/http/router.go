@@ -18,10 +18,19 @@ func NewRouter(
 	tokens port.TokenService,
 	users repository.UserRepository,
 	allowedOrigins []string,
-) *gin.Engine {
+	trustedProxies []string,
+) (*gin.Engine, error) {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
+
+	// With no trusted proxies configured, ClientIP() falls back to the raw
+	// socket address, so a spoofed X-Forwarded-For header cannot be used to
+	// bypass per-IP rate limiting. Set TRUSTED_PROXIES to the load
+	// balancer/ingress CIDRs when running behind one.
+	if err := r.SetTrustedProxies(trustedProxies); err != nil {
+		return nil, err
+	}
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS(allowedOrigins))
 	r.Use(middleware.RateLimit(rate.Limit(100), 20))
@@ -52,5 +61,5 @@ func NewRouter(
 		}
 	}
 
-	return r
+	return r, nil
 }

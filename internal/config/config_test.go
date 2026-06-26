@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -103,5 +104,27 @@ func TestLoad_PoolAndRedisTimeoutOverrides(t *testing.T) {
 	}
 	if cfg.RedisCommandTimeout != 1500*time.Millisecond {
 		t.Errorf("RedisCommandTimeout = %v, want 1500ms", cfg.RedisCommandTimeout)
+	}
+}
+
+func TestTrustedProxyList(t *testing.T) {
+	cases := []struct {
+		name  string
+		value string
+		want  []string
+	}{
+		{"empty trusts none", "", []string{}},
+		{"single entry", "10.0.0.1", []string{"10.0.0.1"}},
+		{"multiple entries trimmed", " 10.0.0.0/8 , 172.16.0.0/12 ", []string{"10.0.0.0/8", "172.16.0.0/12"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &config.Config{TrustedProxies: tc.value}
+			got := cfg.TrustedProxyList()
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("TrustedProxyList() = %#v, want %#v", got, tc.want)
+			}
+		})
 	}
 }

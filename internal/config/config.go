@@ -22,6 +22,7 @@ type Config struct {
 	JWTRefreshTTL          time.Duration `mapstructure:"JWT_REFRESH_TTL"`
 	OTLPEndpoint           string        `mapstructure:"OTLP_ENDPOINT"`
 	AllowedOrigins         string        `mapstructure:"ALLOWED_ORIGINS"`
+	TrustedProxies         string        `mapstructure:"TRUSTED_PROXIES"`
 	CircuitFailThreshold   int           `mapstructure:"CIRCUIT_FAILURE_THRESHOLD"`
 	CircuitResetTimeout    time.Duration `mapstructure:"CIRCUIT_RESET_TIMEOUT"`
 	RetryMaxAttempts       int           `mapstructure:"RETRY_MAX_ATTEMPTS"`
@@ -48,6 +49,11 @@ func Load() (*Config, error) {
 	viper.SetDefault("JWT_REFRESH_TTL", 7*24*time.Hour)
 	viper.SetDefault("OTLP_ENDPOINT", "localhost:4317")
 	viper.SetDefault("ALLOWED_ORIGINS", "http://localhost:3000")
+	// Empty by default: Gin trusts no proxy and reads the client IP from the
+	// raw socket address unless this is set to the load balancer/ingress
+	// CIDRs in front of the service, which is required for rate limiting by
+	// client IP to be meaningful behind a reverse proxy.
+	viper.SetDefault("TRUSTED_PROXIES", "")
 	viper.SetDefault("CIRCUIT_FAILURE_THRESHOLD", 5)
 	viper.SetDefault("CIRCUIT_RESET_TIMEOUT", 30*time.Second)
 	viper.SetDefault("RETRY_MAX_ATTEMPTS", 3)
@@ -80,14 +86,24 @@ func Load() (*Config, error) {
 // AllowedOriginList splits the comma-separated ALLOWED_ORIGINS value into a
 // trimmed slice, ready to be passed to the CORS middleware allow-list.
 func (c *Config) AllowedOriginList() []string {
-	parts := strings.Split(c.AllowedOrigins, ",")
-	origins := make([]string, 0, len(parts))
+	return splitTrimmed(c.AllowedOrigins)
+}
+
+// TrustedProxyList splits the comma-separated TRUSTED_PROXIES value into a
+// trimmed slice of IPs/CIDRs, ready to be passed to gin.Engine.SetTrustedProxies.
+func (c *Config) TrustedProxyList() []string {
+	return splitTrimmed(c.TrustedProxies)
+}
+
+func splitTrimmed(value string) []string {
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
 	for _, p := range parts {
 		if trimmed := strings.TrimSpace(p); trimmed != "" {
-			origins = append(origins, trimmed)
+			result = append(result, trimmed)
 		}
 	}
-	return origins
+	return result
 }
 
 // CircuitBreaker builds a CircuitBreaker from the configured threshold and

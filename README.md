@@ -132,10 +132,18 @@ The `PasswordHasher` interface in `domain/repository/` abstracts the algorithm f
 
 ### Security Middleware (applied globally via Gin)
 
-- Rate limiting: in-memory per-IP token bucket via `golang.org/x/time/rate` (stricter limit on `/v1/auth/*`)
-- Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, `Referrer-Policy`
+- Rate limiting: in-memory per-IP token bucket via `golang.org/x/time/rate` (stricter limit on `/v1/auth/*`), reading the client IP through Gin's trusted-proxy resolution — see `TRUSTED_PROXIES` below
+- Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, `Referrer-Policy`, `Content-Security-Policy`, `Permissions-Policy`
 - CORS: explicit allow-list, never `*` in production
 - Input validation: Gin binding tags (backed by `go-playground/validator`) on all request DTOs
+
+### TLS
+
+The process serves plain HTTP/gRPC. TLS termination is expected to happen at the load balancer/ingress in front of it (the standard shape on Kubernetes, ECS, Cloud Run, etc.), which also keeps certificate issuance and rotation out of the application.
+
+### Trusted Proxies
+
+`c.ClientIP()` — the value the rate limiter keys on — only trusts `X-Forwarded-For`/`X-Real-IP` for proxies listed in `TRUSTED_PROXIES`. Leave it empty when the service is reachable directly: the raw socket address is used and the header is ignored, so it cannot be spoofed to bypass per-IP limits. Set it to your load balancer/ingress CIDRs when running behind one.
 
 ### Audit Logging
 
@@ -238,6 +246,7 @@ All configuration via environment variables or `.env` file (Viper reads both).
 | `JWT_ACCESS_TTL` | `15m` | Access token TTL (Go duration string) |
 | `JWT_REFRESH_TTL` | `168h` | Refresh token TTL (Go duration string) |
 | `ALLOWED_ORIGINS` | `http://localhost:3000` | Comma-separated CORS allow-list |
+| `TRUSTED_PROXIES` | — (trust none) | Comma-separated list of reverse proxy IPs/CIDRs trusted to set `X-Forwarded-For` |
 | `OTLP_ENDPOINT` | `localhost:4317` | OTLP gRPC traces/metrics endpoint |
 
 ---
