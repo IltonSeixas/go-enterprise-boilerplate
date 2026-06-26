@@ -41,7 +41,7 @@ jobs:
       - name: Compress
         run: tar czf boilerplate-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz boilerplate-${{ matrix.goos }}-${{ matrix.goarch }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: boilerplate-${{ matrix.goos }}-${{ matrix.goarch }}
           path: "*.tar.gz"
