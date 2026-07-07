@@ -171,11 +171,19 @@ func (s *StubTokenServiceRejectAll) FindUserIDByRefreshToken(_ context.Context, 
 	return uuid.UUID{}, false, nil
 }
 
+func (s *StubTokenServiceRejectAll) RedeemRefreshToken(_ context.Context, _ string) (port.RedemptionResult, error) {
+	return port.RedemptionResult{Outcome: port.RedemptionInvalid}, nil
+}
+
 func (s *StubTokenServiceRejectAll) RotateRefreshToken(_ context.Context, _ string, _ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
 	return port.TokenPair{}, apperror.ErrTokenInvalid
 }
 
 func (s *StubTokenServiceRejectAll) RevokeRefreshToken(_ context.Context, _ string) error { return nil }
+
+func (s *StubTokenServiceRejectAll) RevokeAllRefreshTokens(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
 
 var _ port.TokenService = (*StubTokenServiceRejectAll)(nil)
 
@@ -208,11 +216,22 @@ func (s *StubTokenServiceWithClaims) FindUserIDByRefreshToken(_ context.Context,
 	return s.Claims.UserID, true, nil
 }
 
+func (s *StubTokenServiceWithClaims) RedeemRefreshToken(_ context.Context, token string) (port.RedemptionResult, error) {
+	if token != s.ValidRefreshToken {
+		return port.RedemptionResult{Outcome: port.RedemptionInvalid}, nil
+	}
+	return port.RedemptionResult{Outcome: port.RedemptionOK, UserID: s.Claims.UserID}, nil
+}
+
 func (s *StubTokenServiceWithClaims) RotateRefreshToken(_ context.Context, _ string, id uuid.UUID, role entity.Role) (port.TokenPair, error) {
 	return port.TokenPair{AccessToken: s.ValidToken, RefreshToken: "refresh-new"}, nil
 }
 
 func (s *StubTokenServiceWithClaims) RevokeRefreshToken(_ context.Context, _ string) error {
+	return nil
+}
+
+func (s *StubTokenServiceWithClaims) RevokeAllRefreshTokens(_ context.Context, _ uuid.UUID) error {
 	return nil
 }
 
@@ -235,13 +254,57 @@ func (s *StubTokenService) FindUserIDByRefreshToken(_ context.Context, _ string)
 	return uuid.New(), true, nil
 }
 
+func (s *StubTokenService) RedeemRefreshToken(_ context.Context, _ string) (port.RedemptionResult, error) {
+	return port.RedemptionResult{Outcome: port.RedemptionOK, UserID: uuid.New()}, nil
+}
+
 func (s *StubTokenService) RotateRefreshToken(_ context.Context, _ string, id uuid.UUID, role entity.Role) (port.TokenPair, error) {
 	return port.TokenPair{AccessToken: "access-new", RefreshToken: "refresh-new"}, nil
 }
 
 func (s *StubTokenService) RevokeRefreshToken(_ context.Context, _ string) error { return nil }
 
+func (s *StubTokenService) RevokeAllRefreshTokens(_ context.Context, _ uuid.UUID) error { return nil }
+
 var _ port.TokenService = (*StubTokenService)(nil)
+
+// StubTokenServiceReusedToken simulates RedeemRefreshToken reporting a reuse
+// signal for every token, and records whether RevokeAllRefreshTokens was called.
+type StubTokenServiceReusedToken struct {
+	UserID     uuid.UUID
+	RevokedAll bool
+}
+
+func (s *StubTokenServiceReusedToken) GeneratePair(_ context.Context, _ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
+	return port.TokenPair{}, apperror.ErrInternal
+}
+
+func (s *StubTokenServiceReusedToken) ValidateAccessToken(_ string) (port.AccessTokenClaims, error) {
+	return port.AccessTokenClaims{}, apperror.ErrTokenInvalid
+}
+
+func (s *StubTokenServiceReusedToken) FindUserIDByRefreshToken(_ context.Context, _ string) (uuid.UUID, bool, error) {
+	return uuid.UUID{}, false, nil
+}
+
+func (s *StubTokenServiceReusedToken) RedeemRefreshToken(_ context.Context, _ string) (port.RedemptionResult, error) {
+	return port.RedemptionResult{Outcome: port.RedemptionReused, UserID: s.UserID}, nil
+}
+
+func (s *StubTokenServiceReusedToken) RotateRefreshToken(_ context.Context, _ string, _ uuid.UUID, _ entity.Role) (port.TokenPair, error) {
+	return port.TokenPair{}, apperror.ErrTokenInvalid
+}
+
+func (s *StubTokenServiceReusedToken) RevokeRefreshToken(_ context.Context, _ string) error {
+	return nil
+}
+
+func (s *StubTokenServiceReusedToken) RevokeAllRefreshTokens(_ context.Context, userID uuid.UUID) error {
+	s.RevokedAll = true
+	return nil
+}
+
+var _ port.TokenService = (*StubTokenServiceReusedToken)(nil)
 
 // StubPinger returns a fixed error without I/O.
 type StubPinger struct {
