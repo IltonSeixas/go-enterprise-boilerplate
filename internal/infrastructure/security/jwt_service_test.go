@@ -2,6 +2,7 @@ package security_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
+	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/application/port"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/domain/entity"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/resilience"
 	"github.com/IltonSeixas/go-enterprise-boilerplate/internal/infrastructure/security"
@@ -76,4 +78,98 @@ func TestJWTService_ValidateAccessToken_RejectsTokenSignedWithDifferentKeyPair(t
 
 	_, err = verifyingSvc.ValidateAccessToken(pair.AccessToken)
 	require.Error(t, err)
+}
+
+func TestJWTService_RedeemRefreshToken_ReturnsOK_WhenTokenIsLive(t *testing.T) {
+	svc := newTestJWTService(t, testPublicKeyPEM)
+	userID := uuid.New()
+
+	pair, err := svc.GeneratePair(context.Background(), userID, entity.RoleUser)
+	require.NoError(t, err)
+
+	result, err := svc.RedeemRefreshToken(context.Background(), pair.RefreshToken)
+	require.NoError(t, err)
+	require.Equal(t, port.RedemptionOK, result.Outcome)
+	require.Equal(t, userID, result.UserID)
+}
+
+func TestJWTService_RedeemRefreshToken_ReturnsInvalid_WhenTokenNeverExisted(t *testing.T) {
+	svc := newTestJWTService(t, testPublicKeyPEM)
+
+	result, err := svc.RedeemRefreshToken(context.Background(), "never-issued")
+	require.NoError(t, err)
+	require.Equal(t, port.RedemptionInvalid, result.Outcome)
+}
+
+func TestJWTService_RedeemRefreshToken_ReturnsReused_OnSecondRedemption(t *testing.T) {
+	svc := newTestJWTService(t, testPublicKeyPEM)
+	userID := uuid.New()
+
+	pair, err := svc.GeneratePair(context.Background(), userID, entity.RoleUser)
+	require.NoError(t, err)
+
+	first, err := svc.RedeemRefreshToken(context.Background(), pair.RefreshToken)
+	require.NoError(t, err)
+	require.Equal(t, port.RedemptionOK, first.Outcome)
+
+	second, err := svc.RedeemRefreshToken(context.Background(), pair.RefreshToken)
+	require.NoError(t, err)
+	require.Equal(t, port.RedemptionReused, second.Outcome)
+	require.Equal(t, userID, second.UserID)
+}
+
+func TestJWTService_RedeemRefreshToken_ConcurrentReplay_ExactlyOneWins(t *testing.T) {
+	svc := newTestJWTService(t, testPublicKeyPEM)
+	userID := uuid.New()
+
+	pair, err := svc.GeneratePair(context.Background(), userID, entity.RoleUser)
+	require.NoError(t, err)
+
+	const attempts = 20
+	results := make(chan port.RedemptionOutcome, attempts)
+	var wg sync.WaitGroup
+	wg.Add(attempts)
+	for i := 0; i < attempts; i++ {
+		go func() {
+			defer wg.Done()
+			result, err := svc.RedeemRefreshToken(context.Background(), pair.RefreshToken)
+			require.NoError(t, err)
+			results <- result.Outcome
+		}()
+	}
+	wg.Wait()
+	close(results)
+
+	var okCount, reusedCount int
+	for outcome := range results {
+		switch outcome {
+		case port.RedemptionOK:
+			okCount++
+		case port.RedemptionReused:
+			reusedCount++
+		}
+	}
+
+	require.Equal(t, 1, okCount, "exactly one concurrent redemption should succeed")
+	require.Equal(t, attempts-1, reusedCount, "every other replay should be flagged as reused")
+}
+
+func TestJWTService_RevokeAllRefreshTokens_RevokesEveryTokenForUser(t *testing.T) {
+	svc := newTestJWTService(t, testPublicKeyPEM)
+	userID := uuid.New()
+
+	pairA, err := svc.GeneratePair(context.Background(), userID, entity.RoleUser)
+	require.NoError(t, err)
+	pairB, err := svc.GeneratePair(context.Background(), userID, entity.RoleUser)
+	require.NoError(t, err)
+
+	require.NoError(t, svc.RevokeAllRefreshTokens(context.Background(), userID))
+
+	resultA, err := svc.RedeemRefreshToken(context.Background(), pairA.RefreshToken)
+	require.NoError(t, err)
+	require.Equal(t, port.RedemptionInvalid, resultA.Outcome)
+
+	resultB, err := svc.RedeemRefreshToken(context.Background(), pairB.RefreshToken)
+	require.NoError(t, err)
+	require.Equal(t, port.RedemptionInvalid, resultB.Outcome)
 }

@@ -9,12 +9,13 @@ import (
 type AuditEventType string
 
 const (
-	AuditEventUserRegistered  AuditEventType = "user_registered"
-	AuditEventLoginSucceeded  AuditEventType = "login_succeeded"
-	AuditEventLoginFailed     AuditEventType = "login_failed"
-	AuditEventPasswordChanged AuditEventType = "password_changed"
-	AuditEventRoleChanged     AuditEventType = "role_changed"
-	AuditEventTokenRefreshed  AuditEventType = "token_refreshed"
+	AuditEventUserRegistered            AuditEventType = "user_registered"
+	AuditEventLoginSucceeded            AuditEventType = "login_succeeded"
+	AuditEventLoginFailed               AuditEventType = "login_failed"
+	AuditEventPasswordChanged           AuditEventType = "password_changed"
+	AuditEventRoleChanged               AuditEventType = "role_changed"
+	AuditEventTokenRefreshed            AuditEventType = "token_refreshed"
+	AuditEventRefreshTokenReuseDetected AuditEventType = "refresh_token_reuse_detected"
 )
 
 type AuditEvent struct {

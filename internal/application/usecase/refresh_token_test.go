@@ -71,5 +71,19 @@ func TestRefreshToken_RotatesTokenPairOnSuccess(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "access-stub", out.AccessToken)
-	assert.Equal(t, "refresh-new", out.RefreshToken)
+	assert.Equal(t, "refresh-stub", out.RefreshToken)
+}
+
+func TestRefreshToken_ReusedTokenRevokesAllSessionsAndRejects(t *testing.T) {
+	repo := testutil.NewStubUserRepo()
+	user := activeUser(t, "reuse@example.com")
+	require.NoError(t, repo.Save(context.Background(), user))
+
+	tokens := &testutil.StubTokenServiceReusedToken{UserID: user.ID().UUID()}
+
+	uc := usecase.NewRefreshToken(repo, tokens, testutil.NewStubAuditPort())
+	_, err := uc.Execute(context.Background(), dto.RefreshInput{RefreshToken: "stolen-token"})
+
+	assert.ErrorIs(t, err, apperror.ErrInvalidCredentials)
+	assert.True(t, tokens.RevokedAll, "expected RevokeAllRefreshTokens to be called on reuse")
 }
