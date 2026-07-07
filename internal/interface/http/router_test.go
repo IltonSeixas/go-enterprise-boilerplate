@@ -39,7 +39,11 @@ func buildTestRouter() *gin.Engine {
 
 	healthH := handler.NewHealthHandler(testutil.NewStubPinger(nil), testutil.NewStubPinger(nil))
 
-	return httpinterface.NewRouter(authH, userH, healthH, tokens, repo, []string{"https://app.example.com"})
+	r, err := httpinterface.NewRouter(authH, userH, healthH, tokens, repo, []string{"https://app.example.com"}, nil)
+	if err != nil {
+		panic(err)
+	}
+	return r
 }
 
 func TestRouter_HealthEndpoint(t *testing.T) {
@@ -102,4 +106,5 @@ func TestRouter_SecurityHeadersApplied(t *testing.T) {
 
 	assert.NotEmpty(t, rec.Header().Get("X-Content-Type-Options"))
 	assert.NotEmpty(t, rec.Header().Get("X-Frame-Options"))
+	assert.NotEmpty(t, rec.Header().Get("Content-Security-Policy"))
 }

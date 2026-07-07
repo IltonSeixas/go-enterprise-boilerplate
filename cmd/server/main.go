@@ -82,13 +82,19 @@ func main() {
 		pgxCfg.MaxConnLifetime = cfg.DBPoolMaxLifetime
 		pgxCfg.ConnConfig.ConnectTimeout = cfg.DBPoolConnectTimeout
 
-		pool, err := pgxpool.NewWithConfig(ctx, pgxCfg)
+		// Startup work gets its own bounded context so a stalled database or
+		// migration cannot hang main() indefinitely on the unbounded ctx
+		// used for the rest of the process lifetime.
+		startupCtx, cancelStartup := context.WithTimeout(ctx, cfg.DBPoolConnectTimeout+30*time.Second)
+		defer cancelStartup()
+
+		pool, err := pgxpool.NewWithConfig(startupCtx, pgxCfg)
 		if err != nil {
 			log.Fatal("postgres connection error", zap.Error(err))
 		}
 		defer pool.Close()
 
-		if err := postgres.Migrate(ctx, pool); err != nil {
+		if err := postgres.Migrate(startupCtx, pool); err != nil {
 			log.Fatal("postgres migration error", zap.Error(err))
 		}
 
@@ -138,8 +144,14 @@ func main() {
 	userHandler := handler.NewUserHandler(getUser, listUsers, updateProfile, changePassword, changeRole)
 	healthHandler := handler.NewHealthHandler(handler.RedisPinger{Client: redisClient}, dbPinger)
 
-	router := httpinterface.NewRouter(authHandler, userHandler, healthHandler, tokenSvc, userRepo, cfg.AllowedOriginList())
+	router, err := httpinterface.NewRouter(authHandler, userHandler, healthHandler, tokenSvc, userRepo, cfg.AllowedOriginList(), cfg.TrustedProxyList())
+	if err != nil {
+		log.Fatal("router setup error", zap.Error(err))
+	}
 
+	// TLS termination is expected to happen at the load balancer/ingress in
+	// front of this service (the standard deployment shape on Kubernetes,
+	// ECS, and similar platforms); the process itself serves plain HTTP.
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Handler:      router,
@@ -188,7 +200,20 @@ func main() {
 		log.Error("graceful shutdown failed", zap.Error(err))
 	}
 
-	grpcServer.GracefulStop()
+	// GracefulStop blocks until every in-flight RPC finishes, with no
+	// built-in deadline; race it against shutCtx and force-stop on timeout
+	// so a stuck stream cannot hang process shutdown forever.
+	grpcStopped := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(grpcStopped)
+	}()
+	select {
+	case <-grpcStopped:
+	case <-shutCtx.Done():
+		log.Warn("grpc graceful stop timed out, forcing stop")
+		grpcServer.Stop()
+	}
 
 	if shutTrace != nil {
 		if err := shutTrace(shutCtx); err != nil {
