@@ -233,7 +233,7 @@ All configuration via environment variables or `.env` file (Viper reads both).
 | `GRPC_PORT` | `50051` | gRPC port |
 | `ADAPTER` | `memory` | Persistence adapter: `memory` or `postgres` |
 | `DATABASE_URL` | — | PostgreSQL DSN (required when `ADAPTER=postgres`) |
-| `REDIS_URL` | `redis://localhost:6379` | Redis connection URL (refresh token storage) |
+| `REDIS_URL` | `redis://localhost:6379` | Redis connection URL (refresh token storage) — embed credentials for authenticated deployments (`redis://:password@host:6379`) and use `rediss://` for TLS in transit; `docker-compose.yml` requires `REDIS_PASSWORD` and wires it in automatically |
 | `DB_POOL_MAX_CONNS` | `10` | Maximum number of pooled Postgres connections (used when `ADAPTER=postgres`) |
 | `DB_POOL_MIN_CONNS` | `2` | Minimum number of idle Postgres connections kept open |
 | `DB_POOL_CONNECT_TIMEOUT` | `30s` | Max time to wait for a free connection from the pool (Go duration string) |
