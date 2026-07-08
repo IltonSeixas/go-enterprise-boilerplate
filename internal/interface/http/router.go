@@ -54,10 +54,10 @@ func NewRouter(
 		{
 			protected.GET("/me", userH.GetMe)
 			protected.PUT("/me", userH.UpdateMe)
-			protected.PUT("/me/password", userH.ChangePassword)
+			protected.PUT("/me/password", middleware.UserRateLimit(rate.Limit(5), 5), userH.ChangePassword)
 			protected.GET("", userH.ListUsers)
 			protected.GET("/:id", userH.GetUser)
-			protected.PUT("/:id/role", userH.ChangeRole)
+			protected.PUT("/:id/role", middleware.UserRateLimit(rate.Limit(5), 5), userH.ChangeRole)
 		}
 	}
 
