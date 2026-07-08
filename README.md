@@ -132,7 +132,7 @@ The `PasswordHasher` interface in `domain/repository/` abstracts the algorithm f
 
 ### Security Middleware (applied globally via Gin)
 
-- Rate limiting: in-memory per-IP token bucket via `golang.org/x/time/rate` (stricter limit on `/v1/auth/*`), reading the client IP through Gin's trusted-proxy resolution — see `TRUSTED_PROXIES` below
+- Rate limiting: in-memory per-IP token bucket via `golang.org/x/time/rate` (stricter limit on `/v1/auth/*`), reading the client IP through Gin's trusted-proxy resolution — see `TRUSTED_PROXIES` below. Sensitive authenticated actions (`PUT /v1/users/me/password`, `PUT /v1/users/:id/role`) additionally get a per-authenticated-user limit (`UserRateLimit`, keyed by the access token's user id rather than IP) — a valid token already rules out anonymous brute force, but without this a holder of a stolen token could otherwise hammer these endpoints without limit
 - Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, `Referrer-Policy`, `Content-Security-Policy`, `Permissions-Policy`
 - CORS: explicit allow-list, never `*` in production
 - Input validation: Gin binding tags (backed by `go-playground/validator`) on all request DTOs
